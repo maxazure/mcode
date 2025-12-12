@@ -17,7 +17,7 @@ class LLMConfig:
 
     base_url: str = "https://open.bigmodel.cn/api/paas/v4"
     api_key: str = ""
-    model: str = "glm-4-flash"
+    model: str = "glm-4.6"
     temperature: float = 0.7
     max_tokens: int = 4096
     timeout: float = 120.0
@@ -25,7 +25,7 @@ class LLMConfig:
     # API endpoint path (auto-detected based on base_url)
     chat_endpoint: str = ""
     # Thinking model configuration
-    thinking_model: str = "glm-z1-flash"
+    thinking_model: str = "glm-4.6"
     # Whether to parse and extract thinking content
     parse_thinking: bool = True
 

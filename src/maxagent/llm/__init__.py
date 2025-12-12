@@ -2,6 +2,7 @@
 
 from .client import LLMClient, LLMConfig
 from .copilot_client import CopilotLLMClient, CopilotLLMConfig, create_copilot_client
+from .factory import create_llm_client
 from .models import ChatResponse, Message, StreamDelta, ToolCall, ToolCallFunction, Usage
 
 __all__ = [
@@ -10,6 +11,7 @@ __all__ = [
     "CopilotLLMClient",
     "CopilotLLMConfig",
     "create_copilot_client",
+    "create_llm_client",
     "Message",
     "ChatResponse",
     "StreamDelta",
@@ -21,15 +23,7 @@ __all__ = [
 
 # Thinking model mapping for different providers
 THINKING_MODELS = {
-    # GLM thinking models
-    "glm-z1-flash": {
-        "provider": "glm",
-        "format": "tags",  # Uses <think>...</think> tags
-    },
-    "glm-z1-air": {
-        "provider": "glm",
-        "format": "tags",
-    },
+    # GLM thinking models（已统一到 glm-4.6）
     "glm-4.6": {
         "provider": "glm",
         "format": "tags",  # GLM-4.6 also supports thinking with <think> tags

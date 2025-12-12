@@ -31,7 +31,7 @@ PROVIDER_DEFAULTS = {
     },
     APIProvider.GLM: {
         "base_url": "https://open.bigmodel.cn/api/paas/v4",
-        "model": "glm-4-flash",
+        "model": "glm-4.6",
     },
     APIProvider.GITHUB_COPILOT: {
         "base_url": "https://api.githubcopilot.com",
@@ -65,12 +65,12 @@ class ModelConfig(BaseModel):
     """Model configuration"""
 
     default: str = Field(
-        default="glm-4-flash",
+        default="glm-4.6",
         description="Default model to use",
     )
     thinking_model: str = Field(
-        default="glm-z1-flash",
-        description="Model for deep thinking tasks (glm-z1-flash, deepseek-reasoner, etc.)",
+        default="glm-4.6",
+        description="Model for deep thinking tasks (固定为 glm-4.6)",
     )
     thinking_strategy: str = Field(
         default="auto",
@@ -91,16 +91,19 @@ class ModelConfig(BaseModel):
         gt=0,
         description="Maximum tokens in response",
     )
+    max_iterations: int = Field(
+        default=100,
+        gt=0,
+        le=1000,
+        description="Maximum tool call iterations per request",
+    )
     # Available models for quick switching
     available_models: list[str] = Field(
         default_factory=lambda: [
-            "glm-4-flash",
             "glm-4.6",
-            "glm-4-plus",
-            "glm-z1-flash",
-            "glm-z1-air",
             "gpt-4",
             "gpt-4-turbo",
+            "gpt-4.1",
             "gpt-4o",
             "gpt-4o-mini",
             "gpt-3.5-turbo",
@@ -127,6 +130,7 @@ class ToolsConfig(BaseModel):
             "list_files",
             "search_code",
             "write_file",
+            "edit",  # Preferred for modifying existing files
             "run_command",
             "grep",
             "glob",
@@ -135,6 +139,12 @@ class ToolsConfig(BaseModel):
             "git_log",
             "git_branch",
             "webfetch",
+            # Long-term memory search
+            "search_memory",
+            # Todo tools for task management
+            "todowrite",
+            "todoread",
+            "todoclear",
         ],
         description="List of enabled tools",
     )

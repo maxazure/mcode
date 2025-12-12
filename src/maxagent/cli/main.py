@@ -2,6 +2,7 @@
 
 import typer
 from typing import Optional
+from pathlib import Path
 
 # Enable -h as alias for --help
 app = typer.Typer(
@@ -29,11 +30,31 @@ def main(
     ctx: typer.Context,
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="Override default model"),
+    max_iterations: Optional[int] = typer.Option(
+        None, "--max-iterations", "-i", help="Maximum tool call iterations (default: 100)"
+    ),
+    project: Optional[Path] = typer.Option(
+        None, "--project", "-P", help="Project directory (default: current directory)"
+    ),
+    config: Optional[Path] = typer.Option(
+        None, "--config", "-c", help="Path to configuration file"
+    ),
+    yolo: bool = typer.Option(
+        False, "--yolo", help="YOLO mode: allow reading/writing files anywhere on the system"
+    ),
+    debug_context: bool = typer.Option(
+        False, "--debug-context", help="Show context token usage before each API call"
+    ),
 ) -> None:
     """MaxAgent - AI Code Assistant CLI"""
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
     ctx.obj["model"] = model
+    ctx.obj["max_iterations"] = max_iterations
+    ctx.obj["project"] = project
+    ctx.obj["config"] = config
+    ctx.obj["yolo"] = yolo
+    ctx.obj["debug_context"] = debug_context
 
 
 @app.command()

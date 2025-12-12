@@ -24,6 +24,16 @@ from .tokens import (
     reset_token_tracker,
     MODEL_PRICING,
 )
+from .context import (
+    ContextManager,
+    ContextStats,
+    get_context_manager,
+    reset_context_manager,
+    count_messages_tokens,
+    estimate_tokens,
+    get_model_context_limit,
+    MODEL_CONTEXT_LIMITS,
+)
 
 __all__ = [
     "console",
@@ -45,4 +55,13 @@ __all__ = [
     "get_token_tracker",
     "reset_token_tracker",
     "MODEL_PRICING",
+    # Context management
+    "ContextManager",
+    "ContextStats",
+    "get_context_manager",
+    "reset_context_manager",
+    "count_messages_tokens",
+    "estimate_tokens",
+    "get_model_context_limit",
+    "MODEL_CONTEXT_LIMITS",
 ]

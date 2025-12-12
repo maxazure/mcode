@@ -67,6 +67,17 @@ def task(
         "-p",
         help="Pipe mode: output JSONL for programmatic use",
     ),
+    yolo: bool = typer.Option(
+        False,
+        "--yolo",
+        help="YOLO mode: allow reading/writing files anywhere on the system",
+    ),
+    max_iterations: Optional[int] = typer.Option(
+        None,
+        "--max-iterations",
+        "-i",
+        help="Maximum tool call iterations (default: from config)",
+    ),
 ):
     """
     Execute a complex task using multi-agent collaboration.
@@ -93,6 +104,12 @@ def task(
 
         # Pipe mode for programmatic use
         llc task "Add error handling" -p | jq
+
+        # YOLO mode for unrestricted file access
+        llc task "Update ~/config/settings.json" --yolo
+
+        # Limit tool iterations
+        llc task "Complex refactoring" --max-iterations 50
     """
     if description is None:
         if pipe:
@@ -104,6 +121,11 @@ def task(
             console.print('\nExample: llc task "Add a new API endpoint for user profile"')
         raise typer.Exit(0)
 
+    # Get global options from context
+    global_opts = ctx.obj or {}
+    effective_yolo = yolo or global_opts.get("yolo", False)
+    effective_max_iterations = max_iterations or global_opts.get("max_iterations")
+
     asyncio.run(
         _execute_task(
             description=description,
@@ -113,6 +135,8 @@ def task(
             backup=backup,
             verbose=verbose,
             pipe=pipe,
+            yolo=effective_yolo,
+            max_iterations=effective_max_iterations,
         )
     )
 
@@ -125,11 +149,20 @@ async def _execute_task(
     backup: bool,
     verbose: bool,
     pipe: bool = False,
+    yolo: bool = False,
+    max_iterations: Optional[int] = None,
 ) -> None:
     """Execute the task with multi-agent collaboration"""
 
     # Load config
     config = load_config()
+
+    # Show YOLO mode warning
+    if yolo and not pipe:
+        console.print(
+            "[bold yellow]Warning: YOLO mode enabled - file access restrictions disabled[/bold yellow]"
+        )
+        console.print()
 
     # Create orchestrator with config
     orchestrator_config = OrchestratorConfig(
@@ -140,6 +173,8 @@ async def _execute_task(
     orchestrator = create_orchestrator(
         config=config,
         orchestrator_config=orchestrator_config,
+        allow_outside_project=yolo,
+        max_iterations=max_iterations,
     )
 
     # Track current phase for progress display

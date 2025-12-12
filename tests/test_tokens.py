@@ -57,13 +57,13 @@ class TestTokenTracker:
         tracker = TokenTracker()
         usage = Usage(prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
-        tracker.add_usage(usage, "glm-4-flash")
+        tracker.add_usage(usage, "glm-4.6")
 
         assert tracker.prompt_tokens == 100
         assert tracker.completion_tokens == 50
         assert tracker.total_tokens == 150
         assert tracker.request_count == 1
-        assert "glm-4-flash" in tracker.model_stats
+        assert "glm-4.6" in tracker.model_stats
 
     def test_add_multiple_usages(self):
         """Test adding multiple usages"""
@@ -71,14 +71,14 @@ class TestTokenTracker:
         usage1 = Usage(prompt_tokens=100, completion_tokens=50, total_tokens=150)
         usage2 = Usage(prompt_tokens=200, completion_tokens=100, total_tokens=300)
 
-        tracker.add_usage(usage1, "glm-4-flash")
-        tracker.add_usage(usage2, "glm-4-flash")
+        tracker.add_usage(usage1, "glm-4.6")
+        tracker.add_usage(usage2, "glm-4.6")
 
         assert tracker.prompt_tokens == 300
         assert tracker.completion_tokens == 150
         assert tracker.total_tokens == 450
         assert tracker.request_count == 2
-        assert tracker.model_stats["glm-4-flash"].request_count == 2
+        assert tracker.model_stats["glm-4.6"].request_count == 2
 
     def test_add_usage_multiple_models(self):
         """Test adding usage from multiple models"""
@@ -86,12 +86,12 @@ class TestTokenTracker:
         usage1 = Usage(prompt_tokens=100, completion_tokens=50, total_tokens=150)
         usage2 = Usage(prompt_tokens=200, completion_tokens=100, total_tokens=300)
 
-        tracker.add_usage(usage1, "glm-4-flash")
+        tracker.add_usage(usage1, "glm-4.6")
         tracker.add_usage(usage2, "gpt-4")
 
         assert tracker.request_count == 2
         assert len(tracker.model_stats) == 2
-        assert "glm-4-flash" in tracker.model_stats
+        assert "glm-4.6" in tracker.model_stats
         assert "gpt-4" in tracker.model_stats
 
     def test_calculate_cost(self):
@@ -99,9 +99,9 @@ class TestTokenTracker:
         tracker = TokenTracker()
         usage = Usage(prompt_tokens=1000, completion_tokens=500, total_tokens=1500)
 
-        tracker.add_usage(usage, "glm-4-flash")
+        tracker.add_usage(usage, "glm-4.6")
 
-        # GLM-4-flash pricing: 0.0001 per 1K tokens
+        # glm-4.6 pricing: 0.0001 per 1K tokens
         expected_cost = (1000 / 1000) * 0.0001 + (500 / 1000) * 0.0001
         assert abs(tracker.get_total_cost() - expected_cost) < 0.0001
 
@@ -109,7 +109,7 @@ class TestTokenTracker:
         """Test get_summary method"""
         tracker = TokenTracker()
         usage = Usage(prompt_tokens=100, completion_tokens=50, total_tokens=150)
-        tracker.add_usage(usage, "glm-4-flash")
+        tracker.add_usage(usage, "glm-4.6")
 
         summary = tracker.get_summary()
 
@@ -118,13 +118,13 @@ class TestTokenTracker:
         assert summary["total_tokens"] == 150
         assert summary["request_count"] == 1
         assert "estimated_cost_usd" in summary
-        assert "glm-4-flash" in summary["models_used"]
+        assert "glm-4.6" in summary["models_used"]
 
     def test_format_short(self):
         """Test format_short method"""
         tracker = TokenTracker()
         usage = Usage(prompt_tokens=100, completion_tokens=50, total_tokens=150)
-        tracker.add_usage(usage, "glm-4-flash")
+        tracker.add_usage(usage, "glm-4.6")
 
         short = tracker.format_short()
 
@@ -136,9 +136,9 @@ class TestTokenTracker:
         """Test format_last method"""
         tracker = TokenTracker()
         usage = Usage(prompt_tokens=100, completion_tokens=50, total_tokens=150)
-        tracker.add_usage(usage, "glm-4-flash")
+        tracker.add_usage(usage, "glm-4.6")
 
-        last = tracker.format_last(usage, "glm-4-flash")
+        last = tracker.format_last(usage, "glm-4.6")
 
         assert "150" in last  # total tokens
         assert "[dim]" in last  # has formatting
@@ -147,7 +147,7 @@ class TestTokenTracker:
         """Test reset method"""
         tracker = TokenTracker()
         usage = Usage(prompt_tokens=100, completion_tokens=50, total_tokens=150)
-        tracker.add_usage(usage, "glm-4-flash")
+        tracker.add_usage(usage, "glm-4.6")
 
         tracker.reset()
 
@@ -191,9 +191,8 @@ class TestModelPricing:
 
     def test_glm_models_have_pricing(self):
         """Test GLM models have pricing"""
-        assert "glm-4-flash" in MODEL_PRICING
         assert "glm-4.6" in MODEL_PRICING
-        assert "glm-z1-flash" in MODEL_PRICING
+        assert "glm-4.6" in MODEL_PRICING
 
     def test_openai_models_have_pricing(self):
         """Test OpenAI models have pricing"""

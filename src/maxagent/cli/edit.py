@@ -16,7 +16,7 @@ from rich.syntax import Syntax
 
 from maxagent.config import load_config
 from maxagent.core import AgentConfig, Agent
-from maxagent.llm import LLMClient, LLMConfig
+from maxagent.llm import create_llm_client
 from maxagent.tools import ToolResult, create_default_registry
 from maxagent.utils.console import print_dim, print_error, print_info, print_success
 from maxagent.utils.diff import apply_patch, extract_patches_from_text
@@ -74,6 +74,7 @@ def _tool_callback_jsonl(name: str, args: str, result: ToolResult) -> None:
 
 @app.callback()
 def edit(
+    ctx: typer.Context,
     file: Path = typer.Argument(..., help="File to edit"),
     instruction: str = typer.Argument(..., help="Edit instruction"),
     apply: bool = typer.Option(False, "--apply", "-a", help="Apply changes without confirmation"),
@@ -83,6 +84,12 @@ def edit(
     pipe: bool = typer.Option(
         False, "--pipe", "-p", help="Pipe mode: output JSONL for programmatic use"
     ),
+    yolo: bool = typer.Option(
+        False, "--yolo", help="YOLO mode: allow reading/writing files anywhere on the system"
+    ),
+    max_iterations: Optional[int] = typer.Option(
+        None, "--max-iterations", "-i", help="Maximum tool call iterations (default: from config)"
+    ),
 ) -> None:
     """
     Edit a file with AI assistance.
@@ -91,8 +98,29 @@ def edit(
         llc edit src/app.py "Add error handling"
         llc edit README.md "Fix typos and improve grammar" --apply
         llc edit src/app.py "Add logging" -p | jq  # Pipe mode with JSONL output
+        llc edit ~/some/file.py "Add docstrings" --yolo  # YOLO mode for unrestricted access
+        llc edit src/app.py "Refactor" --max-iterations 50  # Limit tool iterations
     """
-    asyncio.run(_edit_file(file, instruction, apply, no_backup, model, project, pipe))
+    # Get global options from context
+    global_opts = ctx.obj or {}
+    effective_model = model or global_opts.get("model")
+    effective_project = project or global_opts.get("project")
+    effective_yolo = yolo or global_opts.get("yolo", False)
+    effective_max_iterations = max_iterations or global_opts.get("max_iterations")
+
+    asyncio.run(
+        _edit_file(
+            file,
+            instruction,
+            apply,
+            no_backup,
+            effective_model,
+            effective_project,
+            pipe,
+            effective_yolo,
+            effective_max_iterations,
+        )
+    )
 
 
 async def _edit_file(
@@ -103,6 +131,8 @@ async def _edit_file(
     model: Optional[str],
     project: Optional[Path],
     pipe: bool = False,
+    yolo: bool = False,
+    max_iterations: Optional[int] = None,
 ) -> None:
     """Handle file editing"""
     try:
@@ -124,26 +154,27 @@ async def _edit_file(
             config.model.default = model
 
         # Create LLM client
-        llm_config = LLMConfig(
-            base_url=config.litellm.base_url,
-            api_key=config.litellm.api_key,
-            model=config.model.default,
-            temperature=config.model.temperature,
-            max_tokens=config.model.max_tokens,
-        )
-        llm_client = LLMClient(llm_config)
+        llm_client = create_llm_client(config)
 
-        # Create tool registry
-        tool_registry = create_default_registry(project_root)
+        # Show YOLO mode warning
+        if yolo and not pipe:
+            print_info("[YOLO mode] File access restrictions disabled")
+
+        # Create tool registry with YOLO mode support
+        tool_registry = create_default_registry(project_root, allow_outside_project=yolo)
 
         # Choose callback based on mode
         tool_callback = _tool_callback_jsonl if pipe else _tool_callback
+
+        # Determine max_iterations: CLI arg > config > default
+        effective_max_iterations = max_iterations or config.model.max_iterations
 
         # Create agent with edit-specific prompt
         agent_config = AgentConfig(
             name="editor",
             system_prompt=EDIT_SYSTEM_PROMPT,
             tools=["read_file", "list_files", "search_code"],
+            max_iterations=effective_max_iterations,
         )
 
         agent = Agent(

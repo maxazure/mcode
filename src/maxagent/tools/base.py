@@ -17,6 +17,10 @@ class ToolParameter:
     required: bool = True
     enum: Optional[list[str]] = None
     default: Optional[Any] = None
+    # For array types: define the structure of array items
+    items: Optional[dict[str, Any]] = None
+    # For object types: define nested properties
+    properties: Optional[dict[str, Any]] = None
 
 
 @dataclass
@@ -64,6 +68,12 @@ class BaseTool(ABC):
                 prop["enum"] = param.enum
             if param.default is not None:
                 prop["default"] = param.default
+            # For array types: add items schema
+            if param.items:
+                prop["items"] = param.items
+            # For object types: add properties schema
+            if param.properties:
+                prop["properties"] = param.properties
 
             properties[param.name] = prop
 

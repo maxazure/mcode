@@ -284,7 +284,7 @@ def create_thinking_selector(
 
 # Provider-specific thinking model defaults
 THINKING_MODEL_DEFAULTS = {
-    "glm": "glm-z1-flash",
+    "glm": "glm-4.6",
     "deepseek": "deepseek-reasoner",
     "openai": "o1-preview",  # OpenAI's reasoning model
     "anthropic": "claude-3-opus-20240229",  # Claude with extended thinking
@@ -300,4 +300,4 @@ def get_default_thinking_model(provider: str) -> str:
     Returns:
         Default thinking model name
     """
-    return THINKING_MODEL_DEFAULTS.get(provider.lower(), "glm-z1-flash")
+    return THINKING_MODEL_DEFAULTS.get(provider.lower(), "glm-4.6")

@@ -16,11 +16,7 @@ from maxagent.llm.models import Usage
 # Reference: https://openai.com/pricing (OpenAI)
 MODEL_PRICING = {
     # GLM models (CNY, converted to USD roughly)
-    "glm-4-flash": {"input": 0.0001, "output": 0.0001},  # 0.1元/百万tokens
-    "glm-4.6": {"input": 0.0005, "output": 0.0005},
-    "glm-4-plus": {"input": 0.007, "output": 0.007},  # 50元/百万tokens
-    "glm-z1-flash": {"input": 0.0007, "output": 0.0007},  # 5元/百万tokens
-    "glm-z1-air": {"input": 0.0007, "output": 0.0007},
+    "glm-4.6": {"input": 0.0001, "output": 0.0001},  # 0.1元/百万tokens
     # OpenAI models
     "gpt-4": {"input": 0.03, "output": 0.06},
     "gpt-4-turbo": {"input": 0.01, "output": 0.03},

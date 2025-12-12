@@ -61,7 +61,7 @@ class TestApplyEnvVars:
         assert result["litellm"]["api_key"] == "test-glm-key"
         assert result["litellm"]["provider"] == "glm"
         assert "bigmodel.cn" in result["litellm"]["base_url"]
-        assert result["model"]["default"] == "glm-4-flash"
+        assert result["model"]["default"] == "glm-4.6"
 
     def test_openai_api_key(self, monkeypatch, clean_env):
         """Test OpenAI API key configuration"""
@@ -194,6 +194,28 @@ class TestLoadConfig:
         )
 
         assert isinstance(config, Config)
+
+    def test_load_dotenv_sets_env_vars(self, clean_env, temp_dir):
+        """.env in project root should populate env overrides"""
+        (temp_dir / ".env").write_text('GLM_API_KEY="dotenv-key"\n')
+
+        config = load_config(
+            project_root=temp_dir,
+            user_config_path=temp_dir / "user.yaml",
+            project_config_path=temp_dir / "project.yaml",
+        )
+
+        assert config.litellm.api_key == "dotenv-key"
+        assert config.model.default == "glm-4.6"
+
+    def test_load_dotenv_does_not_override_exported_env(self, clean_env, temp_dir, monkeypatch):
+        """.env should not override already-exported environment variables"""
+        (temp_dir / ".env").write_text('GLM_API_KEY="dotenv-key"\n')
+        monkeypatch.setenv("GLM_API_KEY", "exported-key")
+
+        config = load_config(project_root=temp_dir)
+
+        assert config.litellm.api_key == "exported-key"
 
     def test_load_user_config(self, clean_env, temp_dir, monkeypatch):
         """Test loading user config"""

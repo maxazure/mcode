@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from typing import Any, AsyncIterator, Optional
 
 import httpx
@@ -70,8 +71,14 @@ class CopilotLLMClient(LLMClient):
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client with Copilot-specific headers"""
         if self._client is None or self._client.is_closed:
-            # Ensure we have a valid token
-            token = await self._auth.ensure_valid_token()
+            # Ensure we have a valid token. If missing, run device-flow auth in interactive mode.
+            try:
+                token = await self._auth.ensure_valid_token()
+            except ValueError:
+                if not sys.stdin.isatty():
+                    raise
+                print("\nNo valid GitHub Copilot token found. Starting authentication...\n")
+                token = await self._auth.authenticate()
 
             headers = {
                 "Content-Type": "application/json",

@@ -11,12 +11,13 @@
 - 🔧 **工具调用**: 文件操作、代码搜索、命令执行、Web 抓取
 - 🧠 **Deep Thinking**: 支持 GLM/DeepSeek thinking 模型
 - 📊 **Token 统计**: 实时追踪 token 用量和费用
+- 🗂️ **上下文汇总**: 长对话自动滚动摘要 + 长期记忆
 - 🔐 **GitHub Copilot**: 支持 OAuth 认证使用 Copilot 模型
 - 🔄 **Pipe 模式**: JSONL 输出支持程序化调用
 
 ## 技术栈
 
-- **语言**: Python 3.9+
+- **语言**: Python 3.12+
 - **CLI**: Typer + Rich
 - **LLM**: 支持 GLM, OpenAI, GitHub Copilot, DeepSeek 等
 - **Agent**: 原生实现 (轻量、快速)
@@ -29,7 +30,7 @@ git clone https://github.com/maxazure/MaxAgent.git
 cd MaxAgent
 
 # 创建虚拟环境
-python -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate  # Linux/macOS
 # .venv\Scripts\activate   # Windows
 
@@ -50,14 +51,14 @@ export ZHIPU_KEY="your-api-key"
 # OpenAI API
 export OPENAI_API_KEY="your-api-key"
 
-# GitHub Copilot (需要先认证)
+# GitHub Copilot (显式启用会覆盖其它 Key)
 export GITHUB_COPILOT=1
 ```
 
 ### GitHub Copilot 认证
 
 ```bash
-# 首次使用需要 OAuth 认证
+# 首次使用会自动提示 OAuth 认证（也可手动执行）
 llc auth copilot
 
 # 查看认证状态
@@ -133,7 +134,7 @@ response=$(llc chat -p "Generate a function" | jq -r '.content')
 输出格式：
 ```json
 {"type": "tool_call", "tool": "read_file", "success": true, "output": "..."}
-{"type": "response", "content": "...", "model": "glm-4-flash", "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}, "cost_usd": 0.0001}
+{"type": "response", "content": "...", "model": "glm-4.6", "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}, "cost_usd": 0.0001}
 ```
 
 #### REPL 模式命令
@@ -196,23 +197,54 @@ llc auth logout copilot          # 登出
 
 | Provider | 环境变量 | 默认模型 | 说明 |
 |----------|----------|----------|------|
-| GLM (智谱) | `GLM_API_KEY` / `ZHIPU_KEY` | glm-4-flash | 推荐 |
+| GLM (智谱) | `GLM_API_KEY` / `ZHIPU_KEY` | glm-4.6 | 推荐 |
 | OpenAI | `OPENAI_API_KEY` | gpt-4 | |
-| GitHub Copilot | OAuth 认证 | gpt-4o | 需要 `llc auth copilot` |
+| GitHub Copilot | OAuth 认证 | gpt-4o | 首次使用会提示登录 |
 | LiteLLM Proxy | `LITELLM_API_KEY` | 自定义 | |
+
+### 使用 LiteLLM Proxy + GitHub Copilot gpt-4.1
+
+适合想通过 LiteLLM 统一网关来用 Copilot（例如给其它客户端/Agent 共享）：
+
+1. 安装 LiteLLM（建议版本 >= 1.40）：
+
+```bash
+pip install "litellm>=1.40"
+```
+
+2. 启动 Copilot 代理（默认端口 4000，默认模型 `gpt-4.1`）：
+
+```bash
+python scripts/start_litellm_copilot.py
+```
+
+首次请求时终端会提示 GitHub Copilot OAuth Device Flow 登录，Token 会存到 `~/.config/litellm/github_copilot/`。
+
+3. 配置 MaxAgent 走本地代理：
+
+```bash
+unset GITHUB_COPILOT USE_COPILOT          # 避免切到直连 Copilot
+export LITELLM_BASE_URL="http://localhost:4000"
+export LLC_MODEL="copilot-gpt-4.1"
+
+# 如果启动脚本里设置了 --master-key，则同时：
+# export LITELLM_API_KEY="your-master-key"
+```
+
+然后正常使用 `llc chat ...` 即可。
 
 ## Thinking 模型支持
 
 | Provider | 模型 | 格式 |
 |----------|------|------|
-| GLM | glm-z1-flash, glm-z1-air | `<think>` 标签 |
+| GLM | glm-4.6 | `<think>` 标签 |
 | DeepSeek | deepseek-reasoner, deepseek-r1 | reasoning_content |
 
 ## 可用模型列表
 
 ```
 # GLM
-glm-4-flash, glm-4.6, glm-4-plus, glm-z1-flash, glm-z1-air
+glm-4.6
 
 # OpenAI
 gpt-4, gpt-4-turbo, gpt-4o, gpt-4o-mini, gpt-3.5-turbo

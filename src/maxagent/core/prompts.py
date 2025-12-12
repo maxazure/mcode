@@ -71,10 +71,142 @@ TOOL_USAGE_POLICY = """# Tool Usage Policy
 - Reserve bash/command tools exclusively for actual system operations
 
 ## File Operations
-- Always READ a file before attempting to edit it
-- Prefer editing existing files over creating new ones
-- NEVER proactively create documentation files unless explicitly requested
-- When referencing code, include file path and line number: `src/app.py:42`
+
+### ⚠️ CRITICAL: ALWAYS Read Before Edit/Write
+
+**MANDATORY RULE**: Before ANY file modification, you MUST first use `read_file` to:
+1. Verify the file exists and understand its structure
+2. Get the EXACT content for accurate editing
+3. The edit tool will FAIL if you haven't read the file first
+
+### File Edit Decision Tree
+
+Follow this decision tree when modifying files:
+
+```
+1. Is this a NEW file or EXISTING file?
+   └─ NEW file → Use `write_file`
+   └─ EXISTING file → Continue to step 2
+
+2. Have you read the file with `read_file`?
+   └─ NO → Use `read_file` FIRST, then continue
+   └─ YES → Continue to step 3
+
+3. What is the scope of changes?
+   └─ SMALL (<10 lines: fix bug, add comment, rename) → Use `edit` tool
+   └─ MEDIUM (add new function while keeping others) → Use multiple `edit` calls OR careful `write_file`
+   └─ LARGE (>50% changes, restructure) → Use `write_file`
+
+4. When using `write_file` on existing files:
+   └─ MUST include ALL original code
+   └─ ONLY add/modify what's needed
+   └─ NEVER delete existing functions unless explicitly asked
+```
+
+### Edit Tool Usage (for targeted changes)
+
+The `edit` tool performs precise search-and-replace. **Default to `edit` for most changes** - it's safer and more precise.
+
+**Use `edit` for:**
+- Adding docstrings or comments
+- Fixing bugs in specific lines
+- Renaming variables (`replace_all=True`)
+- Small modifications to existing code
+
+**Parameters:**
+- `file_path`: Path to the file to modify
+- `old_string`: The exact text to replace (MUST match file content exactly)
+- `new_string`: The replacement text
+- `replace_all`: Set to true to replace all occurrences (default: false)
+
+**Key Rules:**
+1. **Read first**: ALWAYS `read_file` before `edit` - the tool validates this
+2. **Exact match**: `old_string` must match EXACTLY including:
+   - All spaces and tabs
+   - Correct indentation level
+   - Line breaks (use \\n)
+3. **Include context**: If edit fails with "multiple matches", add more surrounding lines
+4. **Preserve indentation**: `new_string` must have correct indentation for the position
+
+<example title="GOOD: Adding docstring with sufficient context">
+edit(
+  file_path="src/utils.py",
+  old_string="def calculate_total(items):\n    total = 0\n    for item in items:",
+  new_string="def calculate_total(items):\n    \"\"\"Calculate the total price of all items.\"\"\"\n    total = 0\n    for item in items:"
+)
+</example>
+
+<example title="GOOD: Rename variable across file">
+edit(
+  file_path="src/app.py",
+  old_string="user_name",
+  new_string="username",
+  replace_all=True
+)
+</example>
+
+<example title="BAD: Too little context - may match multiple places">
+# DON'T DO THIS - "return result" may appear multiple times
+edit(
+  file_path="src/app.py",
+  old_string="return result",
+  new_string="return result or default"
+)
+# INSTEAD: Include more surrounding context
+edit(
+  file_path="src/app.py",
+  old_string="    if data:\n        result = process(data)\n    return result",
+  new_string="    if data:\n        result = process(data)\n    return result or default"
+)
+</example>
+
+### Edit Tool Error Recovery
+
+If `edit` fails:
+- **"not found"**: The content doesn't match. Use `read_file` again to see exact content.
+- **"multiple matches"**: Too many matches. Add 3-5 surrounding lines to make it unique.
+- **"must read first"**: You must call `read_file` on this file before editing.
+
+### Write Tool Usage (for new files or major changes)
+
+Use `write_file` when:
+- **Creating** entirely new files
+- **Major refactoring** (>50% of file changes)
+- Changes too complex for multiple `edit` calls
+
+**CRITICAL: When using `write_file` on existing files:**
+1. First `read_file` to get ALL current content
+2. **PRESERVE all existing code** - do NOT delete any functions or code
+3. Add your new code to the existing content
+4. Write the COMPLETE file with both old and new code
+
+<example title="Adding sqrt to calculator.py - PRESERVING all existing code">
+# Step 1: Already read file with read_file (saw add, subtract, multiply, divide)
+# Step 2: Write COMPLETE file preserving ALL existing functions:
+write_file(
+  file_path="calculator.py",
+  content='''import math
+
+def add(a, b):
+    return a + b
+
+def subtract(a, b):
+    return a - b
+
+def multiply(a, b):
+    return a * b
+
+def divide(a, b):
+    if b == 0:
+        return "Error: Division by zero"
+    return a / b
+
+# NEW: Added sqrt function
+def sqrt(x):
+    return math.sqrt(x)
+'''
+)
+</example>
 
 ## Path Restrictions (IMPORTANT)
 - All file paths must be RELATIVE to the project root (current working directory)
@@ -84,6 +216,114 @@ TOOL_USAGE_POLICY = """# Tool Usage Policy
 - If user asks to create files outside the project, inform them of this limitation
 - Example valid paths: `src/app.py`, `tests/test_main.py`, `README.md`
 - Example INVALID paths: `~/myfile.py`, `/tmp/file.txt`, `../other/file.py`
+
+## Search Operations
+- For exploring unfamiliar codebases, use tools systematically:
+  1. First use `list_files` to understand project structure
+  2. Use `glob` to find files by pattern (e.g., "**/*.py")
+  3. Use `grep` to search for specific code patterns
+  4. Use `read_file` to examine relevant files
+
+## Command Execution
+- Avoid running destructive commands without user confirmation
+- For long-running commands, consider timeout implications
+- When running tests or builds, handle potential failures gracefully"""
+
+
+# YOLO mode policy - allows unrestricted file access
+TOOL_USAGE_POLICY_YOLO = """# Tool Usage Policy
+
+## General Principles
+- Use specialized tools instead of bash commands when possible:
+  - Use `read_file` instead of `cat`, `head`, `tail`
+  - Use `list_files` instead of `ls`
+  - Use `grep` tool instead of `grep` command
+  - Use `glob` tool instead of `find` command
+- NEVER use bash `echo` or similar commands to communicate - write responses directly
+- Reserve bash/command tools exclusively for actual system operations
+
+## File Operations
+
+### ⚠️ CRITICAL: ALWAYS Read Before Edit/Write
+
+**MANDATORY RULE**: Before ANY file modification, you MUST first use `read_file` to:
+1. Verify the file exists and understand its structure
+2. Get the EXACT content for accurate editing
+3. The edit tool will FAIL if you haven't read the file first
+
+### File Edit Decision Tree
+
+Follow this decision tree when modifying files:
+
+```
+1. Is this a NEW file or EXISTING file?
+   └─ NEW file → Use `write_file`
+   └─ EXISTING file → Continue to step 2
+
+2. Have you read the file with `read_file`?
+   └─ NO → Use `read_file` FIRST, then continue
+   └─ YES → Continue to step 3
+
+3. What is the scope of changes?
+   └─ SMALL (<10 lines: fix bug, add comment, rename) → Use `edit` tool
+   └─ MEDIUM (add new function while keeping others) → Use multiple `edit` calls OR careful `write_file`
+   └─ LARGE (>50% changes, restructure) → Use `write_file`
+
+4. When using `write_file` on existing files:
+   └─ MUST include ALL original code
+   └─ ONLY add/modify what's needed
+   └─ NEVER delete existing functions unless explicitly asked
+```
+
+### Edit Tool Usage (for targeted changes)
+
+The `edit` tool performs precise search-and-replace. **Default to `edit` for most changes** - it's safer and more precise.
+
+**Use `edit` for:**
+- Adding docstrings or comments
+- Fixing bugs in specific lines
+- Renaming variables (`replace_all=True`)
+- Small modifications to existing code
+
+**Parameters:**
+- `file_path`: Path to the file to modify
+- `old_string`: The exact text to replace (MUST match file content exactly)
+- `new_string`: The replacement text
+- `replace_all`: Set to true to replace all occurrences (default: false)
+
+**Key Rules:**
+1. **Read first**: ALWAYS `read_file` before `edit` - the tool validates this
+2. **Exact match**: `old_string` must match EXACTLY including all whitespace and indentation
+3. **Include context**: If edit fails with "multiple matches", add more surrounding lines
+4. **Preserve indentation**: `new_string` must have correct indentation for the position
+
+### Edit Tool Error Recovery
+
+If `edit` fails:
+- **"not found"**: The content doesn't match. Use `read_file` again to see exact content.
+- **"multiple matches"**: Too many matches. Add 3-5 surrounding lines to make it unique.
+- **"must read first"**: You must call `read_file` on this file before editing.
+
+### Write Tool Usage (for new files or major changes)
+
+Use `write_file` when:
+- **Creating** entirely new files
+- **Major refactoring** (>50% of file changes)
+- Changes too complex for multiple `edit` calls
+
+**CRITICAL: When using `write_file` on existing files:**
+1. First `read_file` to get ALL current content
+2. **PRESERVE all existing code** - do NOT delete any functions or code
+3. Add your new code to the existing content
+4. Write the COMPLETE file with both old and new code
+
+## YOLO Mode - Unrestricted File Access
+- YOLO mode is ENABLED - you can read/write files ANYWHERE on the system
+- You CAN use absolute paths like `/Users/...` or `~/...`
+- You CAN create files and directories outside the project
+- Expand `~` to the user's home directory when needed
+- Be careful with system files - always confirm before modifying critical files
+- Example valid paths: `~/projects/app.py`, `/tmp/test.txt`, `~/.config/app.json`
 
 ## Search Operations
 - For exploring unfamiliar codebases, use tools systematically:
@@ -243,9 +483,23 @@ def build_environment_context(
 
     if include_time:
         now = datetime.now()
-        lines.append(f"  Today's date: {now.strftime('%a %b %d %Y')}")
+        # Include both formatted date and explicit year to ensure model knows current time
+        lines.append(
+            f"  Current date: {now.strftime('%Y-%m-%d')} ({now.strftime('%A, %B %d, %Y')})"
+        )
+        lines.append(f"  Current year: {now.year}")
 
     lines.append("</env>")
+
+    # Add explicit time awareness instruction
+    if include_time:
+        now = datetime.now()
+        lines.append("")
+        lines.append(
+            f"IMPORTANT: The current date is {now.strftime('%B %d, %Y')} (year {now.year}). "
+            f"When discussing recent events, news, or making predictions, always use {now.year} as the current year reference. "
+            f"Do NOT use outdated years like 2023 or 2024 when referring to 'this year' or 'now'."
+        )
 
     return "\n".join(lines)
 
@@ -324,8 +578,17 @@ class SystemPromptBuilder:
         self._sections.append(tone)
         return self
 
-    def add_tool_usage_policy(self, policy: str = TOOL_USAGE_POLICY) -> "SystemPromptBuilder":
-        """Add tool usage policy."""
+    def add_tool_usage_policy(
+        self, policy: Optional[str] = None, yolo_mode: bool = False
+    ) -> "SystemPromptBuilder":
+        """Add tool usage policy.
+
+        Args:
+            policy: Custom policy string (if None, uses default based on yolo_mode)
+            yolo_mode: If True, use YOLO mode policy (unrestricted file access)
+        """
+        if policy is None:
+            policy = TOOL_USAGE_POLICY_YOLO if yolo_mode else TOOL_USAGE_POLICY
         self._sections.append(policy)
         return self
 
@@ -401,6 +664,8 @@ def build_default_system_prompt(
     tool_registry: Optional[ToolRegistry] = None,
     include_tool_descriptions: bool = False,
     include_git_operations: bool = True,
+    yolo_mode: bool = False,
+    interactive_mode: bool = True,
 ) -> str:
     """Build a complete default system prompt.
 
@@ -410,6 +675,9 @@ def build_default_system_prompt(
         tool_registry: Optional tool registry for tool descriptions
         include_tool_descriptions: Whether to include detailed tool descriptions
         include_git_operations: Whether to include git operations guidelines
+        yolo_mode: If True, use YOLO mode (unrestricted file access)
+        interactive_mode: If True, require user confirmation for plans (chat mode)
+                         If False, execute plans automatically (pipe/headless mode)
 
     Returns:
         Complete system prompt string
@@ -419,9 +687,18 @@ def build_default_system_prompt(
     # Add core sections
     builder.add_identity()
     builder.add_tone_and_style()
-    builder.add_tool_usage_policy()
+    builder.add_tool_usage_policy(yolo_mode=yolo_mode)
     builder.add_code_quality()
-    builder.add_task_management()
+
+    # Add Plan-Execute workflow (replaces simple task management)
+    builder.add_custom_section(PLAN_EXECUTE_WORKFLOW)
+
+    # Add mode-specific instructions
+    if interactive_mode:
+        builder.add_custom_section(PLAN_EXECUTE_INTERACTIVE)
+    else:
+        builder.add_custom_section(PLAN_EXECUTE_HEADLESS)
+
     builder.add_response_format()
 
     # Add git operations if needed
@@ -643,3 +920,118 @@ class TestFunctionUnderTest:
         builder.add_project_instructions(project_instructions)
 
     return builder.build()
+
+
+# =============================================================================
+# Plan-Execute Workflow
+# =============================================================================
+
+PLAN_EXECUTE_WORKFLOW = """# Task Execution Guidelines
+
+## Simple vs Complex Tasks
+
+### Simple Tasks (1-2 files, straightforward changes)
+For simple tasks like:
+- Adding type annotations
+- Adding docstrings
+- Renaming variables
+- Simple bug fixes
+- Single function modifications
+
+**DO NOT output detailed plans. Just execute:**
+1. Read the file(s) needed
+2. Make the changes using edit tool
+3. Report what you did
+
+### Complex Tasks (3+ files, architectural changes)
+For complex tasks involving multiple files or significant changes:
+- Follow the full Plan-Execute workflow below
+- Use todowrite to track progress
+
+## Plan-Execute Workflow (for complex tasks only)
+
+### Phase 1: Planning
+
+1. **Research and Analyze**
+   - Use read_file, list_files, grep, glob to understand existing code
+   - Identify all files that need modification
+
+2. **Create Todo List** (use todowrite tool)
+   - Create tasks with clear descriptions
+   - Include file paths and technical details
+
+### Phase 2: Execution
+
+1. **Work through tasks ONE BY ONE**:
+   - Mark task as "in_progress"
+   - Read file first, then modify using edit tool
+   - Mark task as "completed"
+
+2. **For each file modification**:
+   - ALWAYS read the file first
+   - Use the `edit` tool for precise changes
+   - Preserve existing code
+
+### Phase 3: Completion
+
+1. Summarize what was accomplished
+2. Note any issues or follow-up items"""
+
+
+PLAN_EXECUTE_INTERACTIVE = """# Interactive Mode - Plan Confirmation Required
+
+In interactive mode, after creating the execution plan:
+
+1. **Present the plan to the user** with full technical details
+2. **Wait for user confirmation** before executing
+3. **User can**:
+   - Approve: "proceed", "go ahead", "execute", "yes", "ok"
+   - Modify: Suggest changes to the plan
+   - Cancel: "cancel", "stop", "no"
+
+4. **Do NOT start execution** until user explicitly confirms
+
+Format your plan request as:
+```
+[Plan details...]
+
+---
+Ready to execute this plan? Please review and confirm, or suggest modifications.
+```"""
+
+
+PLAN_EXECUTE_HEADLESS = """# Automatic Execution Mode
+
+CRITICAL: You are in automatic execution mode. DO NOT just describe what you would do - ACTUALLY DO IT using tool calls.
+
+## Execution Rules
+
+1. **DO NOT output JSON describing tool calls** - Instead, INVOKE the tools directly via function calling
+2. **DO NOT ask for confirmation** - Execute immediately
+3. **DO NOT output detailed plans for simple tasks** - Just do the work
+4. **For simple tasks** (single file edits, adding annotations, etc.):
+   - Read the file
+   - Make the edit
+   - Report what you did
+5. **For complex tasks** (multi-file changes):
+   - Brief summary of what you'll do
+   - Execute each step
+   - Report completion
+
+## WRONG (do not do this):
+```
+{"name": "read_file", "parameters": {"path": "file.py"}}
+```
+
+## CORRECT (do this):
+Actually call the read_file tool, then call the edit tool.
+
+## Simple Task Example
+User: "Add type annotations to the foo function"
+
+Your response should:
+1. Call read_file to see the current code
+2. Call edit to add the annotations  
+3. Respond: "Done. Added type annotations to the foo function."
+
+NOT: Output a plan describing what tools you would call."""

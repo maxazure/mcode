@@ -108,18 +108,12 @@ def create_coder_agent(
         tool_registry: Optional pre-created tool registry
         use_new_prompts: Use the new structured prompt system (default True)
     """
-    from maxagent.llm import LLMConfig
     from maxagent.tools import create_default_registry
 
     if llm_client is None:
-        llm_config = LLMConfig(
-            base_url=config.litellm.base_url,
-            api_key=config.litellm.api_key,
-            model=config.model.default,
-            temperature=config.model.temperature,
-            max_tokens=config.model.max_tokens,
-        )
-        llm_client = LLMClient(llm_config)
+        from maxagent.llm import create_llm_client
+
+        llm_client = create_llm_client(config)
 
     if tool_registry is None:
         root = project_root or Path.cwd()

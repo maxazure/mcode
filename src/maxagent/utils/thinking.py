@@ -1,4 +1,4 @@
-"""Utilities for handling deep thinking responses (GLM glm-z1-flash)"""
+"""Utilities for handling deep thinking responses (GLM glm-4.6)"""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ class ThinkingResult:
 def parse_thinking(content: str) -> ThinkingResult:
     """Parse response content to extract thinking and response parts
     
-    GLM deep thinking models (glm-z1-flash) return thinking in <think>...</think> tags.
+    GLM models (glm-4.6) return thinking in <think>...</think> tags when enabled.
     
     Args:
         content: Raw response content from the model

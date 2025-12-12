@@ -21,6 +21,7 @@ from maxagent.tools import ToolResult, create_registry_with_mcp
 from maxagent.utils.console import print_dim, print_error, print_info
 from maxagent.utils.thinking import display_thinking, ThinkingResult
 from maxagent.utils.tokens import get_token_tracker, reset_token_tracker
+from maxagent.utils.context import get_context_manager
 
 if TYPE_CHECKING:
     from maxagent.core import Agent
@@ -70,6 +71,18 @@ def chat(
     thinking_mode: Optional[str] = typer.Option(
         None, "--thinking-mode", "-t", help="Thinking mode: auto, enabled, disabled"
     ),
+    # YOLO mode - dangerous but powerful
+    yolo: bool = typer.Option(
+        False, "--yolo", help="YOLO mode: allow reading/writing files anywhere on the system"
+    ),
+    # Debug context - show context token usage
+    debug_context: bool = typer.Option(
+        False, "--debug-context", "-dc", help="Show context token usage before each API call"
+    ),
+    # Max iterations for tool calls
+    max_iterations: Optional[int] = typer.Option(
+        None, "--max-iterations", "-i", help="Maximum tool call iterations (default: from config)"
+    ),
 ) -> None:
     """
     Chat with the AI assistant.
@@ -79,11 +92,35 @@ def chat(
         llc chat --think "Analyze this complex algorithm"
         llc chat --thinking-mode=auto "Design a solution"
         llc chat -p "What is Python?" | jq  # Pipe mode with JSONL output
+        llc chat --yolo "Read ~/some/file.txt"  # YOLO mode for unrestricted access
+        llc chat --debug-context "Research this topic"  # Show context usage
+        llc chat --max-iterations 50 "Complex task"  # Limit tool iterations
         llc chat  # Enter REPL mode
     """
+    # Get global options from context
+    global_opts = ctx.obj or {}
+    effective_model = model or global_opts.get("model")
+    effective_project = project or global_opts.get("project")
+    effective_yolo = yolo or global_opts.get("yolo", False)
+    effective_debug_context = debug_context or global_opts.get("debug_context", False)
+    effective_max_iterations = max_iterations or global_opts.get("max_iterations")
+
     if message:
         # Single message mode
-        asyncio.run(_single_chat(message, model, no_tools, project, think, thinking_mode, pipe))
+        asyncio.run(
+            _single_chat(
+                message,
+                effective_model,
+                no_tools,
+                effective_project,
+                think,
+                thinking_mode,
+                pipe,
+                effective_yolo,
+                effective_debug_context,
+                effective_max_iterations,
+            )
+        )
     else:
         if pipe:
             # Pipe mode requires a message
@@ -91,7 +128,19 @@ def chat(
             print(json.dumps(error_output, ensure_ascii=False))
             raise typer.Exit(1)
         # REPL mode
-        asyncio.run(_repl_mode(model, no_tools, no_history, project, think, thinking_mode))
+        asyncio.run(
+            _repl_mode(
+                effective_model,
+                no_tools,
+                no_history,
+                effective_project,
+                think,
+                thinking_mode,
+                effective_yolo,
+                effective_debug_context,
+                effective_max_iterations,
+            )
+        )
 
 
 async def _single_chat(
@@ -102,6 +151,9 @@ async def _single_chat(
     think: Optional[bool] = None,
     thinking_mode: Optional[str] = None,
     pipe: bool = False,
+    yolo: bool = False,
+    debug_context: bool = False,
+    max_iterations: Optional[int] = None,
 ) -> None:
     """Handle single message chat"""
     try:
@@ -142,14 +194,26 @@ async def _single_chat(
         # Choose callback based on mode
         tool_callback = _tool_callback_jsonl if pipe else _tool_callback
 
-        # Create tool registry with MCP tools
-        tool_registry = await create_registry_with_mcp(project_root, load_mcp=not no_tools)
+        # Show YOLO mode warning
+        if yolo and not pipe:
+            print_info("[YOLO mode] File access restrictions disabled")
 
+        # Create tool registry with MCP tools
+        tool_registry = await create_registry_with_mcp(
+            project_root, load_mcp=not no_tools, allow_outside_project=yolo
+        )
+
+        # Single chat mode: interactive_mode=False (auto-execute, no confirmation)
+        # User cannot interact in single message mode, so LLM should execute directly
         agent = create_agent(
             config=config,
             project_root=project_root,
             tool_registry=tool_registry,
             on_tool_call=tool_callback,
+            yolo_mode=yolo,
+            debug_context=debug_context,
+            max_iterations=max_iterations,
+            interactive_mode=False,  # Single chat = headless, execute directly
         )
 
         if pipe:
@@ -202,6 +266,9 @@ async def _repl_mode(
     project: Optional[Path],
     think: Optional[bool] = None,
     thinking_mode: Optional[str] = None,
+    yolo: bool = False,
+    debug_context: bool = False,
+    max_iterations: Optional[int] = None,
 ) -> None:
     """Interactive REPL mode"""
     console.print("[bold green]MaxAgent Chat Mode[/bold green]")
@@ -214,11 +281,19 @@ async def _repl_mode(
     console.print("  /auto   - Auto thinking mode")
     console.print("  /mode   - Show current thinking mode")
     console.print("  /tokens - Show token usage statistics")
+    console.print("  /context - Show context token usage")
     console.print("[dim]Model commands:[/dim]")
     console.print("  /model        - Show current model")
     console.print("  /model <name> - Switch to specified model")
     console.print("  /models       - List available models")
     console.print()
+
+    # Show YOLO mode warning
+    if yolo:
+        console.print(
+            "[bold yellow]Warning: YOLO mode enabled - file access restrictions disabled[/bold yellow]"
+        )
+        console.print()
 
     try:
         config = load_config(project)
@@ -242,13 +317,19 @@ async def _repl_mode(
         project_root = project or Path.cwd()
 
         # Create tool registry with MCP tools
-        tool_registry = await create_registry_with_mcp(project_root, load_mcp=not no_tools)
+        tool_registry = await create_registry_with_mcp(
+            project_root, load_mcp=not no_tools, allow_outside_project=yolo
+        )
 
         agent = create_agent(
             config=config,
             project_root=project_root,
             tool_registry=tool_registry,
             on_tool_call=_tool_callback,
+            yolo_mode=yolo,
+            debug_context=debug_context,
+            max_iterations=max_iterations,
+            interactive_mode=True,  # REPL mode = interactive, ask for confirmation
         )
 
         history: list[Message] = []
@@ -318,6 +399,11 @@ async def _repl_mode(
                 # Token statistics command
                 if user_input.lower() == "/tokens":
                     agent.token_tracker.display(console)
+                    continue
+
+                # Context statistics command
+                if user_input.lower() == "/context":
+                    agent.display_context_status(detailed=True)
                     continue
 
                 # Model commands

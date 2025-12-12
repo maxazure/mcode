@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .base import BaseTool, ToolParameter, ToolResult
+from .edit import FileReadTracker
 
 
 class SecurityChecker:
@@ -190,6 +191,11 @@ class ReadFileTool(BaseTool):
             except ValueError:
                 rel_path = str(file_path)
 
+            # Mark file as read for FileTime tracking (read-before-edit pattern)
+            FileReadTracker.mark_read(path)
+            FileReadTracker.mark_read(str(file_path))
+            FileReadTracker.mark_read(rel_path)
+
             return ToolResult(
                 success=True,
                 output=content,
@@ -292,13 +298,14 @@ class ListFilesTool(BaseTool):
 
 
 class WriteFileTool(BaseTool):
-    """Write content to a file"""
+    """Write content to a file - USE ONLY FOR NEW FILES"""
 
     name = "write_file"
     description = (
-        "Write content to a file (creates if not exists). "
-        "IMPORTANT: Path must be relative to project root by default. "
-        "Cannot write outside the project directory unless --dangerously-allow-outside-project is set."
+        "Create a NEW file with the given content. "
+        "WARNING: This overwrites the entire file when overwrite=true. "
+        "For existing files, either use the `edit` tool or explicitly set overwrite=true "
+        "(after reading the file) to replace it. Path must be relative to project root by default."
     )
     parameters = [
         ToolParameter(
@@ -310,6 +317,15 @@ class WriteFileTool(BaseTool):
             name="content",
             type="string",
             description="Content to write",
+        ),
+        ToolParameter(
+            name="overwrite",
+            type="boolean",
+            description=(
+                "Set to true to overwrite an existing file. "
+                "Default is false to prevent accidental destruction."
+            ),
+            required=False,
         ),
     ]
     risk_level = "high"
@@ -341,6 +357,7 @@ class WriteFileTool(BaseTool):
         self,
         path: str,
         content: str,
+        overwrite: bool = False,
         **kwargs: Any,
     ) -> ToolResult:
         """Write content to file"""
@@ -366,6 +383,29 @@ class WriteFileTool(BaseTool):
                     )
 
             file_path = self._resolve_path(path)
+
+            # Block accidental overwrite of existing files unless explicitly allowed
+            if file_path.exists() and not overwrite:
+                return ToolResult(
+                    success=False,
+                    output="",
+                    error=(
+                        "Refusing to overwrite existing file. "
+                        "Use overwrite=true and include the full file content, or use the edit tool."
+                    ),
+                )
+
+            # If overwriting, require the caller to have read the file recently to avoid blind clobbering
+            if file_path.exists() and overwrite:
+                if not FileReadTracker.was_read_recently(path) and not FileReadTracker.was_read_recently(str(file_path)):
+                    return ToolResult(
+                        success=False,
+                        output="",
+                        error=(
+                            "Overwrite requested but file was not read recently. "
+                            "Read the file first to avoid losing content, or use the edit tool."
+                        ),
+                    )
 
             # Security check
             if not self.security_checker.is_safe_path(file_path):

@@ -183,16 +183,16 @@ class TestThinkingModelDefaults:
 
     def test_get_default_thinking_model(self):
         """Test default thinking model lookup"""
-        assert get_default_thinking_model("glm") == "glm-z1-flash"
+        assert get_default_thinking_model("glm") == "glm-4.6"
         assert get_default_thinking_model("deepseek") == "deepseek-reasoner"
         assert get_default_thinking_model("openai") == "o1-preview"
         assert get_default_thinking_model("anthropic") == "claude-3-opus-20240229"
 
     def test_get_default_thinking_model_case_insensitive(self):
         """Test lookup is case insensitive"""
-        assert get_default_thinking_model("GLM") == "glm-z1-flash"
+        assert get_default_thinking_model("GLM") == "glm-4.6"
         assert get_default_thinking_model("DeepSeek") == "deepseek-reasoner"
 
     def test_get_default_thinking_model_unknown(self):
         """Test unknown provider returns default"""
-        assert get_default_thinking_model("unknown") == "glm-z1-flash"
+        assert get_default_thinking_model("unknown") == "glm-4.6"
