@@ -1,0 +1,30 @@
+litellm:
+  provider: "github_copilot"
+  base_url: "https://api.githubcopilot.com"
+
+model:
+  default: "github_copilot/gpt-4.1"
+  temperature: 0.7
+
+tools:
+  enabled:
+    - read_file
+    - list_files
+    - search_code
+    - write_file
+    - edit
+    - run_command
+    - grep
+    - glob
+    - subagent
+    - task
+    - git_status
+    - git_diff
+    - git_log
+    - git_branch
+    - webfetch
+    - search_memory
+    - todowrite
+    - todoread
+    - todoclear
+  disabled: []

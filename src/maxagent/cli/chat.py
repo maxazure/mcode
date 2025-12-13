@@ -32,10 +32,12 @@ app = typer.Typer(
 )
 console = Console()
 
+
 def _truncate_value(value: str, max_len: int = 120) -> str:
     if len(value) <= max_len:
         return value
     return value[: max_len - 3] + "..."
+
 
 def _one_line(value: object, *, max_len: int = 120) -> str:
     text = str(value) if value is not None else ""
@@ -176,9 +178,7 @@ def _make_request_end_callback() -> callable:
             remaining = stats.get("remaining_tokens", 0)
             model = stats.get("model")
             elapsed_s = stats.get("elapsed_s")
-            elapsed_part = (
-                f", time={elapsed_s:.2f}s" if isinstance(elapsed_s, (int, float)) else ""
-            )
+            elapsed_part = f", time={elapsed_s:.2f}s" if isinstance(elapsed_s, (int, float)) else ""
             console.print(
                 f"[dim]Context(req {request_id}): "
                 f"{current_tokens}/{max_tokens} tokens ({usage_percent:.1f}%), "
@@ -251,9 +251,7 @@ def chat(
     effective_debug_context = debug_context or global_opts.get("debug_context", False)
     effective_max_iterations = max_iterations or global_opts.get("max_iterations")
     effective_tool_planner = (
-        tool_planner
-        if tool_planner is not None
-        else global_opts.get("tool_planner")
+        tool_planner if tool_planner is not None else global_opts.get("tool_planner")
     )
 
     if message:
@@ -360,7 +358,17 @@ async def _single_chat(
         # Create shared LLM client and tool registry (native + MCP + SubAgent)
         from maxagent.llm import create_llm_client
 
-        llm_client = create_llm_client(config)
+        # Pass model_override to enable auto provider selection
+        llm_client = create_llm_client(config, model_override=model if model else None)
+
+        # Display actual model and base_url being used
+        if not pipe:
+            actual_model = llm_client.config.model
+            actual_base_url = getattr(
+                llm_client.config, "base_url", "https://api.githubcopilot.com"
+            )
+            print_dim(f"[Model: {actual_model} | URL: {actual_base_url}]")
+
         tool_registry = await create_full_registry(
             project_root,
             config=config,
@@ -493,7 +501,8 @@ async def _repl_mode(
         # Create shared LLM client and tool registry (native + MCP + SubAgent)
         from maxagent.llm import create_llm_client
 
-        llm_client = create_llm_client(config)
+        # Pass model_override to enable auto provider selection
+        llm_client = create_llm_client(config, model_override=model if model else None)
         tool_registry = await create_full_registry(
             project_root,
             config=config,

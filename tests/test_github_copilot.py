@@ -106,7 +106,7 @@ class TestGitHubCopilotAuth:
     def test_init_default_paths(self):
         """Test default token directory"""
         auth = GitHubCopilotAuth()
-        assert auth.token_dir == Path.home() / ".config" / "maxagent" / "copilot"
+        assert auth.token_dir == Path.home() / ".llc" / "copilot"
 
     def test_init_custom_path(self):
         """Test custom token directory"""

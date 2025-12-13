@@ -969,6 +969,11 @@ The sub-agent has access to the same tools as the main agent."""
                 metadata={"agent_type": agent_type},
             )
 
+        # Load agent profile for error messages
+        from maxagent.config.agent_profiles import load_agent_profile
+
+        profile = load_agent_profile(self._map_agent_type_to_profile_name(agent_type))
+
         try:
             # Import here to avoid circular imports
             from maxagent.core.agent import Agent, AgentConfig, create_agent
@@ -1117,10 +1122,35 @@ The sub-agent has access to the same tools as the main agent."""
             )
 
         except Exception as e:
+            error_msg = str(e)
+            # Provide more helpful error messages for common issues
+            if "401" in error_msg or "Unauthorized" in error_msg:
+                if profile and profile.provider == "github_copilot":
+                    error_msg = (
+                        f"Authentication failed for subagent '{agent_type}': "
+                        f"Agent profile requires GitHub Copilot but authentication failed. "
+                        f"Either run 'llc auth login' to authenticate with GitHub Copilot, "
+                        f"or update the agent profile at ~/.llc/agents/{agent_type}.md to use a different provider."
+                    )
+                else:
+                    error_msg = (
+                        f"Authentication failed for subagent '{agent_type}': {error_msg}. "
+                        f"Please check your API credentials."
+                    )
+            elif "403" in error_msg or "Forbidden" in error_msg:
+                error_msg = (
+                    f"Access denied for subagent '{agent_type}': {error_msg}. "
+                    f"Please check your API permissions."
+                )
+            elif "timeout" in error_msg.lower() or "timed out" in error_msg.lower():
+                error_msg = (
+                    f"Subagent '{agent_type}' timed out. "
+                    f"Consider breaking down the task or increasing timeout."
+                )
             return ToolResult(
                 success=False,
                 output="",
-                error=f"SubAgent execution failed: {str(e)}",
+                error=f"SubAgent execution failed: {error_msg}",
                 metadata={"agent_type": agent_type},
             )
 

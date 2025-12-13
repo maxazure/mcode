@@ -22,9 +22,9 @@ class InstructionSource:
 
 class InstructionsLoader:
     """Loads and combines instruction files from various sources
-    
+
     Priority order (later overrides earlier):
-    1. Global instructions (~/.config/maxagent/MAXAGENT.md)
+    1. Global instructions (~/.llc/MAXAGENT.md)
     2. Parent directory instructions (progressive discovery)
     3. Project root instructions (MAXAGENT.md, AGENTS.md, CLAUDE.md)
     4. Additional files specified in config
@@ -60,9 +60,7 @@ class InstructionsLoader:
         if global_path.exists() and global_path.is_file():
             try:
                 content = global_path.read_text(encoding="utf-8")
-                self._sources.append(
-                    InstructionSource(global_path, content, source_type="global")
-                )
+                self._sources.append(InstructionSource(global_path, content, source_type="global"))
             except Exception:
                 pass  # Silently ignore read errors
 
@@ -86,9 +84,7 @@ class InstructionsLoader:
                     try:
                         content = instruction_file.read_text(encoding="utf-8")
                         parent_sources.append(
-                            InstructionSource(
-                                instruction_file, content, source_type="parent"
-                            )
+                            InstructionSource(instruction_file, content, source_type="parent")
                         )
                     except Exception:
                         pass
@@ -110,9 +106,7 @@ class InstructionsLoader:
                 try:
                     content = instruction_file.read_text(encoding="utf-8")
                     self._sources.append(
-                        InstructionSource(
-                            instruction_file, content, source_type="project"
-                        )
+                        InstructionSource(instruction_file, content, source_type="project")
                     )
                 except Exception:
                     pass
@@ -136,9 +130,7 @@ class InstructionsLoader:
                     try:
                         content = match_path.read_text(encoding="utf-8")
                         self._sources.append(
-                            InstructionSource(
-                                match_path, content, source_type="additional"
-                            )
+                            InstructionSource(match_path, content, source_type="additional")
                         )
                     except Exception:
                         pass
@@ -175,11 +167,11 @@ def load_instructions(
     project_root: Optional[Path] = None,
 ) -> str:
     """Convenience function to load instructions
-    
+
     Args:
         config: Instructions configuration
         project_root: Project root directory (defaults to cwd)
-        
+
     Returns:
         Combined instruction text from all sources
     """
@@ -193,12 +185,12 @@ def find_instruction_file(
     alternative_names: Optional[list[str]] = None,
 ) -> Optional[Path]:
     """Find instruction file in project root
-    
+
     Args:
         project_root: Project root directory (defaults to cwd)
         filename: Primary filename to search
         alternative_names: Alternative filenames
-        
+
     Returns:
         Path to instruction file or None
     """

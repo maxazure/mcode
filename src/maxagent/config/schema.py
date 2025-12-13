@@ -53,7 +53,9 @@ class LiteLLMConfig(BaseModel):
         description="API provider type",
     )
     base_url: str = Field(
-        default=os.getenv("LITELLM_BASE_URL") or os.getenv("GLM_BASE_URL") or "http://localhost:4000",
+        default=os.getenv("LITELLM_BASE_URL")
+        or os.getenv("GLM_BASE_URL")
+        or "http://localhost:4000",
         description="API base URL",
     )
     api_key: str = Field(
@@ -239,7 +241,7 @@ class InstructionsConfig(BaseModel):
         description="Alternative instruction file names to search",
     )
     global_file: str = Field(
-        default="~/.config/maxagent/MAXAGENT.md",
+        default="~/.llc/MAXAGENT.md",
         description="Global instruction file path",
     )
     additional_files: list[str] = Field(

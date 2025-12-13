@@ -148,7 +148,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         "--config",
         type=Path,
         default=None,
-        help="Path to write config (default: ~/.config/maxagent/litellm_copilot.yaml)",
+        help="Path to write config (default: ~/.llc/litellm_copilot.yaml)",
     )
     p.add_argument("--force", action="store_true", help="Overwrite existing config")
     p.add_argument(
@@ -182,14 +182,10 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
 
 def main(argv: List[str]) -> int:
     args = parse_args(argv)
-    config_path = args.config or (
-        Path.home() / ".config" / "maxagent" / "litellm_copilot.yaml"
-    )
+    config_path = args.config or (Path.home() / ".config" / "maxagent" / "litellm_copilot.yaml")
 
     try:
-        headers = parse_extra_headers(
-            args.editor_version, args.integration_id, args.extra_header
-        )
+        headers = parse_extra_headers(args.editor_version, args.integration_id, args.extra_header)
     except ValueError as e:
         print(str(e), file=sys.stderr)
         return 2

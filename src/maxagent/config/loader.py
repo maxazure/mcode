@@ -59,14 +59,12 @@ def _apply_env_vars(config_data: dict[str, Any]) -> dict[str, Any]:
                 config_data.setdefault("litellm", {}).setdefault(
                     "base_url", defaults.get("base_url", "")
                 )
-                config_data.setdefault("model", {}).setdefault(
-                    "default", defaults.get("model", "")
-                )
+                config_data.setdefault("model", {}).setdefault("default", defaults.get("model", ""))
         except ValueError:
             pass
 
-    forced_copilot = (
-        not explicit_provider and (os.getenv("GITHUB_COPILOT") or os.getenv("USE_COPILOT"))
+    forced_copilot = not explicit_provider and (
+        os.getenv("GITHUB_COPILOT") or os.getenv("USE_COPILOT")
     )
     if forced_copilot:
         config_data.setdefault("litellm", {})["provider"] = "github_copilot"
@@ -86,7 +84,9 @@ def _apply_env_vars(config_data: dict[str, Any]) -> dict[str, Any]:
             if "base_url" not in config_data.get("litellm", {}):
                 # Allow explicit GLM base URL override via environment variable
                 glm_base = os.getenv("GLM_BASE_URL")
-                config_data["litellm"]["base_url"] = glm_base or "https://open.bigmodel.cn/api/coding/paas/v4"
+                config_data["litellm"]["base_url"] = (
+                    glm_base or "https://open.bigmodel.cn/api/coding/paas/v4"
+                )
             # Set default model for GLM if not already set
             if "default" not in config_data.get("model", {}):
                 config_data.setdefault("model", {})["default"] = "glm-4.6"
@@ -113,7 +113,11 @@ def _apply_env_vars(config_data: dict[str, Any]) -> dict[str, Any]:
                 config_data.setdefault("model", {})["default"] = "gpt-4o"
 
     # Explicit base URL override (highest priority)
-    if base_url := os.getenv("LITELLM_BASE_URL") or os.getenv("OPENAI_BASE_URL") or os.getenv("GLM_BASE_URL"):
+    if (
+        base_url := os.getenv("LITELLM_BASE_URL")
+        or os.getenv("OPENAI_BASE_URL")
+        or os.getenv("GLM_BASE_URL")
+    ):
         config_data.setdefault("litellm", {})["base_url"] = base_url
 
     # LLC_MODEL or MAXAGENT_MODEL (explicit model override)
@@ -301,7 +305,7 @@ instructions:
     - "AGENTS.md"
     - "CLAUDE.md"
     - ".maxagent.md"
-  global_file: "~/.config/maxagent/MAXAGENT.md"  # Global instruction file
+  global_file: "~/.llc/MAXAGENT.md"  # Global instruction file
   additional_files: []  # Additional instruction files (supports glob)
   auto_discover: true  # Auto-discover instruction files in parent directories
 
