@@ -1016,66 +1016,76 @@ For complex tasks involving multiple files or significant changes:
 - Follow the full Plan-Execute workflow below
 - Use todowrite to track progress
 
-## Plan-Execute Workflow (for complex tasks only)
+## 🚨🚨🚨 CRITICAL: BATCH ALL EDITS IN ONE RESPONSE 🚨🚨🚨
+
+**ABSOLUTE RULE: NEVER call todowrite just to update status. Only use todowrite to:**
+1. Create the initial plan (all todos as "pending")
+2. Mark ALL todos as "completed" TOGETHER with ALL edit calls in the SAME response
+
+**FORBIDDEN PATTERNS (will waste money and time):**
+```
+❌ Response 2: todowrite([{status: "in_progress"}, ...])  # DON'T update status alone!
+❌ Response 3: edit file1.py  # DON'T edit one file per response!
+❌ Response 4: todowrite([{status: "completed"}, {status: "in_progress"}, ...])  # NEVER!
+```
+
+**THE ONLY CORRECT PATTERN:**
+```
+✅ Response 1: read_file(file1) + read_file(file2) + read_file(file3)  # parallel reads
+✅ Response 2: todowrite([{status: "pending"}, {status: "pending"}, {status: "pending"}])  # create plan ONCE
+✅ Response 3: edit(file1) + edit(file2) + edit(file3) + todowrite([all "completed"])  # ALL IN ONE!
+```
+
+**WHY THIS MATTERS:**
+- Each response costs API calls and money
+- 3 files = 3 responses MAXIMUM (read → plan → execute all)
+- If you update todos one by one, you're wasting resources
+
+## Plan-Execute Workflow
 
 ### Phase 1: Research (ONE response)
+Read ALL relevant files in parallel in a SINGLE response.
+
+### Phase 2: Create Plan (ONE response)
+Use todowrite to create todos with SPECIFIC changes for each file.
+Include the actual old_string and new_string values you will use.
+**All todos should be "pending" - do NOT set any to "in_progress"!**
+
+### Phase 3: Execute ALL Edits (ONE response) ⚠️ CRITICAL
+⚠️ **SKIP "in_progress" STATUS** - Go directly from "pending" to "completed"!
+
+In a SINGLE response, include:
+1. ALL edit calls for ALL files (parallel)
+2. ONE todowrite call marking ALL todos as "completed" (skip "in_progress" entirely!)
+
 ```python
-# Read ALL relevant files in parallel:
-read_file(path="file1.py")
-read_file(path="file2.py")
-read_file(path="file3.py")
-# ... etc
-```
-
-### Phase 2: Plan with Specific Changes
-Create todowrite with:
-- Each todo item specifies the TARGET FILE and EXACT CHANGES
-- Include the actual old_string and new_string values
-- Group all changes per file into one todo item
-
-**Example todo structure:**
-```
-Todo 1: [config.py] Update settings
-  - Change DEBUG=False to DEBUG=True
-  - Change MAX_PLAYERS=2 to MAX_PLAYERS=4
-  
-Todo 2: [game.py] Fix collision detection
-  - Replace old collision logic with new algorithm
-  - Add boundary checks
-  
-Todo 3: [utils.py] Add helper functions
-  - Add new validate_input() function
-```
-
-### Phase 3: Execute ALL Edits at Once (ONE response)
-```python
-# Execute ALL file edits in PARALLEL:
+# Example: Execute 3 file edits + update todos in ONE response:
 edit(file_path="config.py", edits=[
     {"old_string": "DEBUG = False", "new_string": "DEBUG = True"},
     {"old_string": "MAX_PLAYERS = 2", "new_string": "MAX_PLAYERS = 4"}
 ])
 edit(file_path="game.py", edits=[
-    {"old_string": "old collision code...", "new_string": "new collision code..."},
-    {"old_string": "# no boundary", "new_string": "if x < 0 or x > WIDTH: ..."}
+    {"old_string": "old code...", "new_string": "new code..."}
 ])
 edit(file_path="utils.py", edits=[
-    {"old_string": "# utils", "new_string": "# utils\\n\\ndef validate_input(x):\\n    ..."}
+    {"old_string": "# utils", "new_string": "# utils\\ndef new_func(): pass"}
 ])
-
-# Update todowrite to mark ALL as completed:
-todowrite(todos=[...all completed...])
+todowrite(todos=[
+    {"id": "1", "status": "completed", ...},
+    {"id": "2", "status": "completed", ...},
+    {"id": "3", "status": "completed", ...}
+])
 ```
 
-### Key Efficiency Rule
-**3 files = 2 responses total:**
-1. Response 1: Read all files (parallel read_file calls)
-2. Response 2: Edit all files (parallel edit calls) + update todos
-
-**NOT 7+ responses like:**
-1. Read file1 → 2. Edit file1 → 3. Read file2 → 4. Edit file2 → ...
-
 ### Phase 4: Completion
-Summarize what was accomplished in a brief message."""
+Summarize what was accomplished.
+
+## Key Rules
+1. **NEVER** call todowrite just to change status to "in_progress" - this is WASTEFUL
+2. **NEVER** edit one file per response - batch ALL edits together
+3. **ALWAYS** go directly: pending → completed (skip in_progress)
+4. **ALWAYS** do: edit ALL files + mark ALL todos completed in ONE response
+5. **3 files = 3 responses**: read all → plan (pending) → execute all + complete all"""
 
 
 PLAN_EXECUTE_INTERACTIVE = """# Interactive Mode - Plan Confirmation Required
@@ -1104,34 +1114,69 @@ PLAN_EXECUTE_HEADLESS = """# Automatic Execution Mode
 
 CRITICAL: You are in automatic execution mode. DO NOT just describe what you would do - ACTUALLY DO IT using tool calls.
 
+## 🚨 THE GOLDEN RULE: BATCH EVERYTHING 🚨
+
+**After creating a todowrite plan, your VERY NEXT response MUST contain ALL edits:**
+
+```python
+# Your next response after creating the plan:
+edit(file_path="file1.py", edits=[...])  # First file
+edit(file_path="file2.py", edits=[...])  # Second file  
+edit(file_path="file3.py", edits=[...])  # Third file
+todowrite(todos=[                         # Update ALL todos at once
+    {"id": "1", "status": "completed", ...},
+    {"id": "2", "status": "completed", ...},
+    {"id": "3", "status": "completed", ...}
+])
+```
+
+**NEVER DO THIS:**
+- ❌ Call todowrite to set status to "in_progress" 
+- ❌ Edit one file per response
+- ❌ Update todo status after each edit
+
 ## Execution Rules
 
 1. **DO NOT output JSON describing tool calls** - Instead, INVOKE the tools directly via function calling
 2. **DO NOT ask for confirmation** - Execute immediately
 3. **DO NOT output detailed plans for simple tasks** - Just do the work
-4. **For simple tasks** (single file edits, adding annotations, etc.):
-   - Read the file
-   - Make the edit
-   - Report what you did
-5. **For complex tasks** (multi-file changes):
-   - Brief summary of what you'll do
-   - Execute each step
-   - Report completion
+4. **DO NOT update todos one by one** - Update all at once with edits
 
-## WRONG (do not do this):
+## 🚨 CRITICAL: BATCH EXECUTION FOR MULTI-FILE TASKS 🚨
+
+When modifying MULTIPLE files, you MUST execute ALL edits in ONE response:
+
+**WRONG (inefficient, wastes requests):**
 ```
-{"name": "read_file", "parameters": {"path": "file.py"}}
+Response 3: edit file1.py
+Response 4: update todos
+Response 5: edit file2.py  
+Response 6: update todos
+Response 7: edit file3.py
 ```
 
-## CORRECT (do this):
-Actually call the read_file tool, then call the edit tool.
+**CORRECT (efficient, batch all in one response):**
+```
+Response 3:
+  - edit(file1.py, edits=[...])
+  - edit(file2.py, edits=[...])
+  - edit(file3.py, edits=[...])
+  - todowrite(all todos marked completed)
+```
 
 ## Simple Task Example
 User: "Add type annotations to the foo function"
 
-Your response should:
 1. Call read_file to see the current code
 2. Call edit to add the annotations  
 3. Respond: "Done. Added type annotations to the foo function."
 
-NOT: Output a plan describing what tools you would call."""
+## Multi-File Task Example  
+User: "Fix bugs in config.py, game.py, and utils.py"
+
+Response 1: read_file(config.py) + read_file(game.py) + read_file(utils.py)
+Response 2: todowrite(create 3 todos with specific changes)
+Response 3: edit(config.py) + edit(game.py) + edit(utils.py) + todowrite(all completed)
+Response 4: "Done. Fixed bugs in all 3 files."
+
+= 4 responses total, NOT 10+ responses!"""

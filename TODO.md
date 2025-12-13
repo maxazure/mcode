@@ -6,6 +6,21 @@
 
 ## ✅ 已完成
 
+### M12.3 阶段: 并行编辑多文件优化 ✅ 已完成
+- [x] 优化多文件编辑的请求效率 - 完成时间: 2024-12-13 - 负责人: maxazure
+  - 文件: src/maxagent/core/prompts.py
+  - **问题**: LLM 在修改多个文件时，会逐个更新 todo 状态 (in_progress → edit → completed)，导致 7+ 个请求处理 3 个文件
+  - **解决方案**:
+    - 在 PLAN_EXECUTE_WORKFLOW 中添加 "ABSOLUTE RULE" 强调不要单独调用 todowrite 更新状态
+    - 明确禁止 "in_progress" 状态更新，直接从 "pending" 到 "completed"
+    - 添加 ❌ FORBIDDEN PATTERNS 和 ✅ CORRECT PATTERN 示例
+    - 更新 Phase 2 和 Phase 3 说明，强调跳过 "in_progress"
+    - 更新 PLAN_EXECUTE_HEADLESS 添加 "THE GOLDEN RULE: BATCH EVERYTHING"
+    - 添加具体的代码示例展示正确的批量执行模式
+  - **测试验证**:
+    - 简单多文件任务 (添加注释头): ✅ 3 个请求处理 3 个文件 (read all → edit all → done)
+    - 复杂多文件任务: 仍可能需要额外请求进行分析，但核心编辑阶段已优化
+
 ### M12.2 阶段: 批量编辑优化 ✅ 已完成
 - [x] 强化批量编辑提示词 - 完成时间: 2024-12-13 - 负责人: maxazure
   - 文件: src/maxagent/core/prompts.py
