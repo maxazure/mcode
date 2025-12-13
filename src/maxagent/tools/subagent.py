@@ -153,9 +153,7 @@ The sub-agent has access to the same tools as the main agent."""
         prefix = f"[subagent:{agent_type}] "
         last_request_id: Optional[int] = None
 
-        def on_tool_call(
-            name: str, args: str, result: ToolResult, request_id: int
-        ) -> None:
+        def on_tool_call(name: str, args: str, result: ToolResult, request_id: int) -> None:
             nonlocal last_request_id
             if request_id != last_request_id:
                 console.print(f"[dim]{prefix}── Request {request_id} ──[/dim]")
@@ -177,9 +175,7 @@ The sub-agent has access to the same tools as the main agent."""
                 model = stats.get("model")
                 elapsed_s = stats.get("elapsed_s")
                 elapsed_part = (
-                    f", time={elapsed_s:.2f}s"
-                    if isinstance(elapsed_s, (int, float))
-                    else ""
+                    f", time={elapsed_s:.2f}s" if isinstance(elapsed_s, (int, float)) else ""
                 )
                 console.print(
                     f"[dim]{prefix}Context(req {request_id}): "
@@ -211,7 +207,11 @@ The sub-agent has access to the same tools as the main agent."""
 
         profile = load_agent_profile(self._map_agent_type_to_profile_name(agent_type))
         if profile and profile.system_prompt:
-            return f"{base_prompt}\n\n{profile.system_prompt}" if base_prompt else profile.system_prompt
+            return (
+                f"{base_prompt}\n\n{profile.system_prompt}"
+                if base_prompt
+                else profile.system_prompt
+            )
         return base_prompt
 
     def _get_profile_llm_client(self, agent_type: str) -> Optional["LLMClient"]:
@@ -277,9 +277,7 @@ The sub-agent has access to the same tools as the main agent."""
 
         checker = SecurityChecker(self.project_root)
         files: list["Path"] = []
-        gitignore_patterns = (
-            self._load_gitignore_patterns() if respect_gitignore else []
-        )
+        gitignore_patterns = self._load_gitignore_patterns() if respect_gitignore else []
         # Skip common large/vendor/cache dirs even if not hidden
         skip_dir_names = {
             "venv",
@@ -318,7 +316,9 @@ The sub-agent has access to the same tools as the main agent."""
                 except Exception:
                     pruned.append(d)
                     continue
-                if gitignore_patterns and self._is_ignored_by_gitignore(rel_dir, gitignore_patterns):
+                if gitignore_patterns and self._is_ignored_by_gitignore(
+                    rel_dir, gitignore_patterns
+                ):
                     pruned.append(d)
             for d in pruned:
                 if d in dirnames:
@@ -423,9 +423,7 @@ The sub-agent has access to the same tools as the main agent."""
         # Basename match or anywhere match (approx)
         return fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(rel_path, pattern)
 
-    def _is_ignored_by_gitignore(
-        self, rel_path: str, patterns: list[dict[str, Any]]
-    ) -> bool:
+    def _is_ignored_by_gitignore(self, rel_path: str, patterns: list[dict[str, Any]]) -> bool:
         """Apply gitignore patterns in order, honoring negation."""
         ignored = False
         for pat in patterns:
@@ -453,14 +451,18 @@ The sub-agent has access to the same tools as the main agent."""
                 root_files.append(rel)
 
         top_lines = [f"- {k}/ ({v} files)" for k, v in sorted(top_counts.items())]
-        ext_lines = [f"- {k}: {v}" for k, v in sorted(ext_counts.items(), key=lambda x: (-x[1], x[0]))]
+        ext_lines = [
+            f"- {k}: {v}" for k, v in sorted(ext_counts.items(), key=lambda x: (-x[1], x[0]))
+        ]
         root_lines = [f"- {p}" for p in sorted(root_files)[:50]]
 
         listed = rel_paths[:max_listed]
         listed_lines = [f"- {p}" for p in listed]
         truncated_note = ""
         if len(rel_paths) > max_listed:
-            truncated_note = f"\n(note: {len(rel_paths) - max_listed} more files omitted from listing)"
+            truncated_note = (
+                f"\n(note: {len(rel_paths) - max_listed} more files omitted from listing)"
+            )
 
         return (
             f"Base directory: {base_path.relative_to(self.project_root)}\n\n"
@@ -472,9 +474,7 @@ The sub-agent has access to the same tools as the main agent."""
             + truncated_note
         )
 
-    def _parse_file_selection(
-        self, content: str
-    ) -> tuple[list[str], list[str], list[str]]:
+    def _parse_file_selection(self, content: str) -> tuple[list[str], list[str], list[str]]:
         """Parse LLM file selection response into (include_paths, patterns, recommended_files)."""
         import re
 
@@ -551,9 +551,9 @@ The sub-agent has access to the same tools as the main agent."""
             f"## Exploration task\n{task}\n\n"
             f"## Directory tree / stats\n{tree_text}\n\n"
             "Return JSON only. Acceptable formats:\n"
-            "1) [\"path1\", \"path2\", ...]  (ordered by importance)\n"
-            "2) {\"include\": [\"path1\", ...], \"patterns\": [\"glob1\", ...], "
-            "\"recommended_files\": [\"pathA\", ...]}\n\n"
+            '1) ["path1", "path2", ...]  (ordered by importance)\n'
+            '2) {"include": ["path1", ...], "patterns": ["glob1", ...], '
+            '"recommended_files": ["pathA", ...]}\n\n'
             f"Rules:\n"
             f"- Only choose from the listed file paths or via patterns that match them.\n"
             f"- Keep include list <= {max_files} files.\n"
@@ -657,15 +657,11 @@ The sub-agent has access to the same tools as the main agent."""
         """Call LLM to summarize one batch."""
         from maxagent.llm.models import Message
 
-        file_list = "\n".join(
-            [f"- {path} (≈{toks} tok)" for path, _, toks in batch]
-        )
+        file_list = "\n".join([f"- {path} (≈{toks} tok)" for path, _, toks in batch])
 
         files_blob_parts: list[str] = []
         for path, content, _toks in batch:
-            files_blob_parts.append(
-                f"\n### {path}\n```\n{content}\n```"
-            )
+            files_blob_parts.append(f"\n### {path}\n```\n{content}\n```")
 
         files_blob = "\n".join(files_blob_parts)
 
@@ -908,11 +904,7 @@ The sub-agent has access to the same tools as the main agent."""
                 + "\n\n---\n\n".join(
                     [f"### Batch {i+1}\n{s}" for i, s in enumerate(batch_summaries)]
                 )
-                + (
-                    f"\n\nNote: {dropped} files were omitted due to batch cap."
-                    if dropped
-                    else ""
-                )
+                + (f"\n\nNote: {dropped} files were omitted due to batch cap." if dropped else "")
             )
 
             final_resp = await self._chat_with_trace(
@@ -928,9 +920,7 @@ The sub-agent has access to the same tools as the main agent."""
             )
             merged = final_resp.content or ""
 
-        batches_block = "\n\n".join(
-            [f"## Batch {i+1}\n{s}" for i, s in enumerate(batch_summaries)]
-        )
+        batches_block = "\n\n".join([f"## Batch {i+1}\n{s}" for i, s in enumerate(batch_summaries)])
         rec_files: list[str] = []
         try:
             rec_files = list(getattr(self, "_last_recommended_files", []))
@@ -1028,7 +1018,9 @@ The sub-agent has access to the same tools as the main agent."""
             elif agent_type == "architect":
                 agent_config = AgentConfig(
                     name="architect",
-                    system_prompt=self._apply_profile_prompt(self._get_architect_prompt(), agent_type),
+                    system_prompt=self._apply_profile_prompt(
+                        self._get_architect_prompt(), agent_type
+                    ),
                     tools=["read_file", "list_files", "search_code", "grep", "glob"],
                     max_iterations=self.max_iterations,
                     temperature=0.3,
@@ -1096,7 +1088,9 @@ The sub-agent has access to the same tools as the main agent."""
             else:  # general
                 agent_config = AgentConfig(
                     name="general",
-                    system_prompt=self._apply_profile_prompt(self._get_general_prompt(), agent_type),
+                    system_prompt=self._apply_profile_prompt(
+                        self._get_general_prompt(), agent_type
+                    ),
                     tools=[],  # Empty means all tools
                     max_iterations=self.max_iterations,
                     temperature=0.5,
@@ -1229,12 +1223,36 @@ Your responsibilities:
 3. Keep command output noise low by summarizing
 4. Return a clear, actionable report to the main agent
 
-Guidelines:
+## Python Testing Commands
+
+**IMPORTANT**: 
+1. If the project has a `.venv` directory, always use `.venv/bin/python -m pytest`
+2. Use `timeout=120` for running all tests (default 30s is often too short)
+
+```python
+# First check for .venv
+list_files(path=".")  # Look for .venv/ directory
+
+# Run all tests with longer timeout
+run_command(command=".venv/bin/python -m pytest tests/ -v --tb=short", timeout=120)
+
+# Run specific test file
+run_command(command=".venv/bin/python -m pytest tests/test_module.py -v --tb=short")
+
+# Run and stop at first failure
+run_command(command=".venv/bin/python -m pytest tests/ -x -v --tb=short")
+
+# Run with coverage (needs longer timeout)
+run_command(command=".venv/bin/python -m pytest tests/ --cov=src --cov-report=term-missing", timeout=180)
+```
+
+## Guidelines
 1. Prefer whitelisted, non-destructive commands; avoid risky operations unless explicitly required
 2. Batch related commands when possible (e.g., check python version, then pip list, then install)
 3. If a command output is long, summarize key lines and omit the rest
 4. Always state what you ran and the outcome
 5. Suggest next steps if something fails
+6. For Python projects, use `python -m` prefix for tools (pytest, pip, etc.)
 
 Output format:
 - Commands run (with cwd if relevant)

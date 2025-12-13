@@ -767,6 +767,9 @@ def build_default_system_prompt(
     else:
         builder.add_custom_section(PLAN_EXECUTE_HEADLESS)
 
+    # Add testing guidelines
+    builder.add_custom_section(TESTING_GUIDELINES)
+
     builder.add_response_format()
 
     # Add git operations if needed
@@ -1180,3 +1183,174 @@ Response 3: edit(config.py) + edit(game.py) + edit(utils.py) + todowrite(all com
 Response 4: "Done. Fixed bugs in all 3 files."
 
 = 4 responses total, NOT 10+ responses!"""
+
+
+# =============================================================================
+# Testing Guidelines
+# =============================================================================
+
+TESTING_GUIDELINES = """# Testing Guidelines
+
+## 🧪 WHEN TO TEST
+
+You should run tests or write tests in these scenarios:
+1. **After making code changes** - Always verify changes don't break existing functionality
+2. **When user asks to test** - Run existing tests or write new ones
+3. **When fixing bugs** - Write a test that reproduces the bug first
+4. **When adding new features** - Write tests for the new functionality
+
+## 🔍 DISCOVERING PROJECT TEST SETUP
+
+Before running tests, understand the project's test setup:
+
+```python
+# Step 1: Check for test configuration files
+list_files(path=".")  # Look for: pytest.ini, pyproject.toml, setup.cfg, package.json
+
+# Step 2: Find existing tests
+glob(pattern="**/test_*.py")  # Python pytest
+glob(pattern="**/*.test.js")  # JavaScript
+
+# Step 3: Check pyproject.toml or package.json for test commands
+read_file(path="pyproject.toml")  # Look for [tool.pytest] section
+```
+
+## 🏃 RUNNING TESTS
+
+### Python (pytest - most common)
+
+**IMPORTANT**: 
+1. If the project uses a virtual environment (.venv), use the venv's Python
+2. Use `timeout=120` for running tests (default 30s is often too short)
+
+```python
+# First check if .venv exists
+list_files(path=".")  # Look for .venv/ directory
+
+# If .venv exists, use venv Python with longer timeout:
+run_command(command=".venv/bin/python -m pytest tests/ -v --tb=short", timeout=120)
+
+# If no .venv, try system python (may not have pytest installed):
+run_command(command="python -m pytest tests/ -v --tb=short", timeout=120)
+```
+
+**Common pytest commands (with .venv):**
+```python
+# Run all tests (use timeout=120 for large test suites)
+run_command(command=".venv/bin/python -m pytest tests/ -v --tb=short", timeout=120)
+
+# Run specific test file
+run_command(command=".venv/bin/python -m pytest tests/test_module.py -v --tb=short")
+
+# Run specific test function
+run_command(command=".venv/bin/python -m pytest tests/test_module.py::test_function -v")
+
+# Run with coverage (may need longer timeout)
+run_command(command=".venv/bin/python -m pytest tests/ --cov=src --cov-report=term-missing", timeout=180)
+
+# Run tests matching pattern
+run_command(command=".venv/bin/python -m pytest tests/ -k 'test_edit' -v")
+
+# Stop at first failure (useful for debugging)
+run_command(command=".venv/bin/python -m pytest tests/ -x -v --tb=short")
+```
+
+### JavaScript/TypeScript (jest/vitest)
+```python
+run_command(command="npm test")
+run_command(command="npx jest --verbose")
+run_command(command="npx vitest run")
+```
+
+## ✍️ WRITING TESTS
+
+### Test File Naming Convention
+- Python: `tests/test_<module>.py` or `tests/<module>_test.py`
+- JavaScript: `__tests__/<module>.test.js` or `<module>.spec.js`
+
+### Python Test Structure (pytest)
+```python
+# tests/test_calculator.py
+import pytest
+from src.calculator import add, subtract, divide
+
+class TestCalculator:
+    \"\"\"Tests for calculator module.\"\"\"
+    
+    def test_add_positive_numbers(self):
+        \"\"\"Test adding two positive numbers.\"\"\"
+        assert add(2, 3) == 5
+    
+    def test_add_negative_numbers(self):
+        \"\"\"Test adding negative numbers.\"\"\"
+        assert add(-1, -1) == -2
+    
+    def test_divide_by_zero_raises_error(self):
+        \"\"\"Test that dividing by zero raises ValueError.\"\"\"
+        with pytest.raises(ValueError):
+            divide(10, 0)
+
+# Fixtures for shared setup
+@pytest.fixture
+def sample_data():
+    return {"key": "value"}
+
+def test_with_fixture(sample_data):
+    assert sample_data["key"] == "value"
+```
+
+### Test Coverage Guidelines
+1. **Happy path** - Normal expected behavior
+2. **Edge cases** - Boundary conditions, empty inputs, max values
+3. **Error cases** - Invalid inputs, exceptions
+4. **Integration** - Components working together
+
+## 🔄 TEST-DRIVEN WORKFLOW
+
+When fixing bugs or adding features:
+
+```
+1. Read existing tests to understand current behavior
+2. Write a failing test that demonstrates the bug/feature
+3. Make the code changes
+4. Run tests to verify the fix
+5. Run ALL tests to ensure no regressions
+```
+
+### Example Workflow
+```python
+# Step 1: Read the code and existing tests
+read_file(path="src/module.py")
+read_file(path="tests/test_module.py")
+
+# Step 2: Write a new test (edit existing test file)
+edit(file_path="tests/test_module.py", edits=[
+    {"old_string": "# End of tests", "new_string": '''
+def test_new_feature():
+    \"\"\"Test the new feature.\"\"\"
+    result = new_feature(input_data)
+    assert result == expected_output
+# End of tests'''}
+])
+
+# Step 3: Run the new test (it should fail)
+run_command(command="python -m pytest tests/test_module.py::test_new_feature -v")
+
+# Step 4: Implement the feature
+edit(file_path="src/module.py", edits=[...])
+
+# Step 5: Run tests again (should pass now)
+run_command(command="python -m pytest tests/test_module.py -v")
+
+# Step 6: Run ALL tests to check for regressions
+run_command(command="python -m pytest tests/ -v")
+```
+
+## ⚠️ IMPORTANT TEST RULES
+
+1. **Always run tests after code changes** - Don't assume changes work
+2. **Run the full test suite** - Not just the test for the file you changed
+3. **Fix failing tests immediately** - Don't leave tests broken
+4. **Tests should be independent** - Each test should work in isolation
+5. **Use descriptive test names** - `test_add_returns_sum_of_two_numbers` not `test_add`
+"""

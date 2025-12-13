@@ -95,7 +95,7 @@ class RunCommandTool(BaseTool):
         self,
         project_root: Path,
         timeout: int = 30,
-        max_output: int = 10000,
+        max_output: int = 50000,
         whitelist: Optional[list[str]] = None,
         require_confirmation: bool = True,
     ) -> None:
@@ -105,7 +105,7 @@ class RunCommandTool(BaseTool):
         Args:
             project_root: Project root directory
             timeout: Default timeout in seconds
-            max_output: Maximum output characters
+            max_output: Maximum output characters (default 50000 for test output)
             whitelist: List of allowed commands (None = use default)
             require_confirmation: Whether to require user confirmation
         """
