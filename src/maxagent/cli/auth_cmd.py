@@ -102,7 +102,7 @@ def auth_copilot(
                 f"[green]Authentication successful![/green]\n\n"
                 f"Token saved to: {auth.token_file}\n\n"
                 "You can now use GitHub Copilot models:\n"
-                "  [bold]llc chat --provider copilot[/bold]",
+                "  [bold]mcode chat --provider copilot[/bold]",
                 title="Success",
             )
         )
@@ -144,13 +144,13 @@ def auth_status() -> None:
         table.add_row(
             "GitHub Copilot",
             "[yellow]⚠ Token expired[/yellow]",
-            "Run 'llc auth copilot' to refresh",
+            "Run 'mcode auth copilot' to refresh",
         )
     else:
         table.add_row(
             "GitHub Copilot",
             "[red]✗ Not authenticated[/red]",
-            "Run 'llc auth copilot' to authenticate",
+            "Run 'mcode auth copilot' to authenticate",
         )
 
     console.print(table)

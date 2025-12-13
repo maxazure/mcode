@@ -11,7 +11,7 @@ from maxagent.llm.client import LLMClient
 
 
 def _write_agent_md(home: Path, name: str, content: str) -> None:
-    agents_dir = home / ".llc" / "agents"
+    agents_dir = home / ".mcode" / "agents"
     agents_dir.mkdir(parents=True, exist_ok=True)
     (agents_dir / f"{name}.md").write_text(content, encoding="utf-8")
 
@@ -51,7 +51,9 @@ Architect rules.\n""",
     assert "Architect rules" in profile.system_prompt
 
 
-def test_create_agent_uses_profile_model_and_prompt(monkeypatch: pytest.MonkeyPatch, temp_dir: Path):
+def test_create_agent_uses_profile_model_and_prompt(
+    monkeypatch: pytest.MonkeyPatch, temp_dir: Path
+):
     _write_agent_md(
         temp_dir,
         "coder",
@@ -65,7 +67,9 @@ Custom coder instruction: prefer minimal diffs.\n""",
     monkeypatch.setattr(Path, "home", lambda: temp_dir)
 
     config = Config(
-        litellm=LiteLLMConfig(provider=APIProvider.GITHUB_COPILOT, base_url="https://api.githubcopilot.com"),
+        litellm=LiteLLMConfig(
+            provider=APIProvider.GITHUB_COPILOT, base_url="https://api.githubcopilot.com"
+        ),
         model=ModelConfig(default="gpt-4o"),
     )
 

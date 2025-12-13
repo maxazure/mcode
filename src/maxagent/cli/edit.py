@@ -95,11 +95,11 @@ def edit(
     Edit a file with AI assistance.
 
     Examples:
-        llc edit src/app.py "Add error handling"
-        llc edit README.md "Fix typos and improve grammar" --apply
-        llc edit src/app.py "Add logging" -p | jq  # Pipe mode with JSONL output
-        llc edit ~/some/file.py "Add docstrings" --yolo  # YOLO mode for unrestricted access
-        llc edit src/app.py "Refactor" --max-iterations 50  # Limit tool iterations
+        mcode edit src/app.py "Add error handling"
+        mcode edit README.md "Fix typos and improve grammar" --apply
+        mcode edit src/app.py "Add logging" -p | jq  # Pipe mode with JSONL output
+        mcode edit ~/some/file.py "Add docstrings" --yolo  # YOLO mode for unrestricted access
+        mcode edit src/app.py "Refactor" --max-iterations 50  # Limit tool iterations
     """
     # Get global options from context
     global_opts = ctx.obj or {}

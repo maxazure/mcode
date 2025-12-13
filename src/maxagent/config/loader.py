@@ -11,9 +11,9 @@ import yaml
 from .schema import APIProvider, Config, PROVIDER_DEFAULTS
 
 # Default config file names
-USER_CONFIG_DIR = ".llc"
+USER_CONFIG_DIR = ".mcode"
 USER_CONFIG_FILE = "config.yaml"
-PROJECT_CONFIG_FILE = ".llc.yaml"
+PROJECT_CONFIG_FILE = ".mcode.yaml"
 
 
 def get_user_config_path() -> Path:
@@ -46,10 +46,10 @@ def _apply_env_vars(config_data: dict[str, Any]) -> dict[str, Any]:
     # API Provider detection and configuration
     # Priority (implicit): GLM_API_KEY/ZHIPU_KEY > OPENAI_API_KEY > LITELLM_API_KEY > GITHUB_COPILOT
     # Explicit overrides:
-    #   - LLC_PROVIDER / MAXAGENT_PROVIDER: force provider
+    #   - MCODE_PROVIDER / MAXAGENT_PROVIDER: force provider
     #   - GITHUB_COPILOT / USE_COPILOT: force Copilot even if other keys exist
 
-    explicit_provider = os.getenv("LLC_PROVIDER") or os.getenv("MAXAGENT_PROVIDER")
+    explicit_provider = os.getenv("MCODE_PROVIDER") or os.getenv("MAXAGENT_PROVIDER")
     if explicit_provider:
         config_data.setdefault("litellm", {})["provider"] = explicit_provider
         try:
@@ -120,12 +120,12 @@ def _apply_env_vars(config_data: dict[str, Any]) -> dict[str, Any]:
     ):
         config_data.setdefault("litellm", {})["base_url"] = base_url
 
-    # LLC_MODEL or MAXAGENT_MODEL (explicit model override)
-    if model := os.getenv("LLC_MODEL") or os.getenv("MAXAGENT_MODEL"):
+    # MCODE_MODEL or MAXAGENT_MODEL (explicit model override)
+    if model := os.getenv("MCODE_MODEL") or os.getenv("MAXAGENT_MODEL"):
         config_data.setdefault("model", {})["default"] = model
 
-    # LLC_TEMPERATURE
-    if temp := os.getenv("LLC_TEMPERATURE"):
+    # MCODE_TEMPERATURE
+    if temp := os.getenv("MCODE_TEMPERATURE"):
         try:
             config_data.setdefault("model", {})["temperature"] = float(temp)
         except ValueError:
@@ -314,8 +314,8 @@ instructions:
 # - OPENAI_API_KEY: OpenAI API key (auto-configures provider)
 # - LITELLM_API_KEY: LiteLLM proxy API key
 # - LITELLM_BASE_URL: Override API base URL
-# - LLC_MODEL: Override default model
-# - LLC_TEMPERATURE: Override temperature
+# - MCODE_MODEL: Override default model
+# - MCODE_TEMPERATURE: Override temperature
 """
 
     config_path.parent.mkdir(parents=True, exist_ok=True)

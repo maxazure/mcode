@@ -241,7 +241,7 @@ class InstructionsConfig(BaseModel):
         description="Alternative instruction file names to search",
     )
     global_file: str = Field(
-        default="~/.llc/MAXAGENT.md",
+        default="~/.mcode/MAXAGENT.md",
         description="Global instruction file path",
     )
     additional_files: list[str] = Field(

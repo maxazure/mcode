@@ -11,12 +11,12 @@
   - **根本原因**: agent profiles 配置了 `model: github_copilot/gpt-4o`，但用户使用 GLM provider 且无 Copilot 认证
   - **解决方案**: 注释掉 agent profiles 中的 model 配置，使 subagent 使用主配置 provider
   - **修改文件**:
-    - `~/.llc/agents/general.md` - 注释 provider 配置
-    - `~/.llc/agents/web_content.md` - 注释 provider 配置
-    - `~/.llc/agents/web_frontend.md` - 注释 provider 配置
-    - `~/.llc/agents/web_designer.md` - 注释 provider 配置
-    - `~/.llc/agents/web_pm.md` - 注释 provider 配置
-    - `~/.llc/agents/web_qa.md` - 注释 provider 配置
+    - `~/.mcode/agents/general.md` - 注释 provider 配置
+    - `~/.mcode/agents/web_content.md` - 注释 provider 配置
+    - `~/.mcode/agents/web_frontend.md` - 注释 provider 配置
+    - `~/.mcode/agents/web_designer.md` - 注释 provider 配置
+    - `~/.mcode/agents/web_pm.md` - 注释 provider 配置
+    - `~/.mcode/agents/web_qa.md` - 注释 provider 配置
   - **错误处理改进**: `src/maxagent/tools/subagent.py` 添加详细的 401/403/timeout 错误诊断
 
 - [x] 改进多 Agent 测试脚本 - 完成时间: 2024-12-13 - 负责人: maxazure
@@ -27,11 +27,11 @@
   - **测试结果**: 3 个 Session，2 次 subagent 调用全部成功
 
 ### 配置文件目录统一 ✅ 已完成
-- [x] 统一配置目录到 `~/.llc` - 完成时间: 2024-12-13 - 负责人: maxazure
+- [x] 统一配置目录到 `~/.mcode` - 完成时间: 2024-12-13 - 负责人: maxazure
   - **代码修改** (5 个文件):
-    - `src/maxagent/auth/github_copilot.py`: `DEFAULT_TOKEN_DIR` → `~/.llc/copilot`
-    - `src/maxagent/mcp/config.py`: `get_mcp_config_path()` → `~/.llc/mcp_servers.json`
-    - `src/maxagent/config/schema.py`: `global_file` 默认值 → `~/.llc/MAXAGENT.md`
+    - `src/maxagent/auth/github_copilot.py`: `DEFAULT_TOKEN_DIR` → `~/.mcode/copilot`
+    - `src/maxagent/mcp/config.py`: `get_mcp_config_path()` → `~/.mcode/mcp_servers.json`
+    - `src/maxagent/config/schema.py`: `global_file` 默认值 → `~/.mcode/MAXAGENT.md`
     - `src/maxagent/config/loader.py`: 配置示例路径更新
     - `src/maxagent/core/instructions.py`: 文档注释路径更新
   - **文档更新** (3 个文件):
@@ -39,8 +39,8 @@
     - `docs/详细设计.md`: 1 处路径引用更新
     - `scripts/start_litellm_copilot.py`: 帮助文本更新
   - **配置文件迁移**:
-    - `~/.config/maxagent/copilot/token.json` → `~/.llc/copilot/token.json`
-    - `~/.config/maxagent/mcp_servers.json` → `~/.llc/mcp_servers.json`
+    - `~/.config/maxagent/copilot/token.json` → `~/.mcode/copilot/token.json`
+    - `~/.config/maxagent/mcp_servers.json` → `~/.mcode/mcp_servers.json`
 
 ---
 
@@ -123,7 +123,7 @@
 #### Agent Profiles 系统
 - [x] 实现 Agent Profiles 配置 - 完成时间: 2024-12-10
   - 文件: `src/maxagent/config/agent_profiles.py`
-  - `~/.llc/agents/` 目录下的 Markdown 配置文件
+  - `~/.mcode/agents/` 目录下的 Markdown 配置文件
   - 支持模型、工具、指令自定义
 
 #### 指令系统
@@ -131,14 +131,14 @@
   - 文件: `src/maxagent/core/instructions.py`
   - 支持 MAXAGENT.md, AGENTS.md, CLAUDE.md 等指令文件
   - Progressive discovery: 遍历父目录发现指令文件
-  - 全局指令文件: ~/.llc/MAXAGENT.md
+  - 全局指令文件: ~/.mcode/MAXAGENT.md
 
 #### GitHub Copilot 集成
 - [x] 实现 GitHub Copilot OAuth Device Flow 认证 - 完成时间: 2024-12-10 - 负责人: maxazure
   - 文件: `src/maxagent/auth/github_copilot.py`
   - OAuth Device Flow 认证流程
   - 自动打开浏览器进行授权
-  - Token 持久化存储 (~/.llc/copilot/token.json)
+  - Token 持久化存储 (~/.mcode/copilot/token.json)
 
 - [x] 实现 GitHub Copilot 客户端 - 完成时间: 2024-12-10 - 负责人: maxazure
   - 文件: `src/maxagent/llm/copilot_client.py`
@@ -148,9 +148,9 @@
 
 - [x] 实现 Copilot CLI 命令 - 完成时间: 2024-12-10 - 负责人: maxazure
   - 文件: `src/maxagent/cli/auth_cmd.py`
-  - `llc auth copilot`: 认证命令
-  - `llc auth status`: 状态查看
-  - `llc auth logout`: 登出命令
+  - `mcode auth copilot`: 认证命令
+  - `mcode auth status`: 状态查看
+  - `mcode auth logout`: 登出命令
 
 #### Thinking 系统
 - [x] 实现 Thinking 基础架构 - 完成时间: 2024-12-10
@@ -212,7 +212,7 @@
     - MCPServerConfig: 服务器配置 (name, url, headers, type, env_vars)
     - MCPConfig: 配置容器
     - 环境变量替换: 支持 `${VAR}` 格式
-    - 持久化存储: ~/.llc/mcp_servers.json
+    - 持久化存储: ~/.mcode/mcp_servers.json
 
 - [x] 实现 MCP HTTP 客户端 - 完成时间: 2024-12-10 - 负责人: maxazure
   - 文件: `src/maxagent/mcp/client.py`
@@ -243,14 +243,14 @@
 - [x] 实现 MCP CLI 命令 - 完成时间: 2024-12-10 - 负责人: maxazure
   - 文件: `src/maxagent/cli/mcp_cmd.py`
   - **子命令**:
-    - `llc mcp add <name> <url>`: 添加 HTTP MCP 服务器
-    - `llc mcp add <name> --command <cmd>`: 添加 Stdio MCP 服务器
-    - `llc mcp remove <name>`: 移除服务器
-    - `llc mcp list [-v]`: 列出已配置服务器
-    - `llc mcp enable/disable <name>`: 启用/禁用服务器
-    - `llc mcp test <name>`: 测试连接和列出工具
-    - `llc mcp tools [name]`: 列出所有 MCP 工具
-    - `llc mcp config`: 显示配置文件路径和内容
+    - `mcode mcp add <name> <url>`: 添加 HTTP MCP 服务器
+    - `mcode mcp add <name> --command <cmd>`: 添加 Stdio MCP 服务器
+    - `mcode mcp remove <name>`: 移除服务器
+    - `mcode mcp list [-v]`: 列出已配置服务器
+    - `mcode mcp enable/disable <name>`: 启用/禁用服务器
+    - `mcode mcp test <name>`: 测试连接和列出工具
+    - `mcode mcp tools [name]`: 列出所有 MCP 工具
+    - `mcode mcp config`: 显示配置文件路径和内容
 
 - [x] 编写 MCP 单元测试 - 完成时间: 2024-12-10 - 负责人: maxazure
   - 文件: `tests/test_mcp.py` (43 个测试用例)
@@ -314,10 +314,10 @@
     - `src/maxagent/cli/task.py`: 添加 `--yolo` 选项
   - **使用示例**:
     ```bash
-    llc chat --yolo "Read ~/some/config.json"
-    llc chat --yolo --no-think "Create a snake game in ~/snake_game"
-    llc edit ~/some/file.py "Add docstrings" --yolo
-    llc task "Update ~/config/settings.json" --yolo
+    mcode chat --yolo "Read ~/some/config.json"
+    mcode chat --yolo --no-think "Create a snake game in ~/snake_game"
+    mcode edit ~/some/file.py "Add docstrings" --yolo
+    mcode task "Update ~/config/settings.json" --yolo
     ```
   - **警告**: 启用 YOLO 模式会显示黄色警告提示
   - **注意**: 使用 `--no-think` 避免 GLM z1 thinking 模型的 tool_calls 兼容问题
@@ -369,11 +369,11 @@
 
 - [x] 端到端集成测试 (Snake Game) - 完成时间: 2024-12-10 - 负责人: maxazure
   - 测试目录: `tests/e2e/snake_game_test/`
-  - **测试场景**: 使用 llc 生成 Snake 游戏
+  - **测试场景**: 使用 mcode 生成 Snake 游戏
   - **测试结果**:
-    - `llc task` 架构分析: 通过 - 正确生成实现计划
-    - `llc chat` 工具调用: 通过 - read_file 工具正常工作
-    - `llc chat --think` 深度思考: 部分通过 - 思考过程正常，输出格式需优化
+    - `mcode task` 架构分析: 通过 - 正确生成实现计划
+    - `mcode chat` 工具调用: 通过 - read_file 工具正常工作
+    - `mcode chat --think` 深度思考: 部分通过 - 思考过程正常，输出格式需优化
     - Snake 游戏代码: 通过 - 语法正确，可正常导入
 
 - [x] 端到端集成测试 (FastAPI) - 完成时间: 2024-12-10 - 负责人: maxazure
@@ -386,13 +386,13 @@
     - `app/routes/todos.py`: CRUD 端点
     - `requirements.txt`: 依赖列表
   - **测试结果**:
-    - `llc chat` 项目分析: 通过 - 正确读取和分析多个文件
+    - `mcode chat` 项目分析: 通过 - 正确读取和分析多个文件
     - FastAPI 应用导入: 通过
     - API 端点测试: 全部通过 (GET/POST/PUT/DELETE)
     - 404 错误处理: 通过
 
 - [x] 修复已发现的问题 - 完成时间: 2024-12-10 - 负责人: maxazure
-  - `llc edit` 命令: 修复 Typer 参数解析问题
+  - `mcode edit` 命令: 修复 Typer 参数解析问题
 
 ---
 
@@ -429,7 +429,7 @@ english_tokens = other_chars / 4
 #### 使用方式
 ```bash
 # 启用上下文调试
-llc chat --debug-context "Your message"
+mcode chat --debug-context "Your message"
 
 # REPL 模式查看上下文
 /context
@@ -491,13 +491,13 @@ Context Debug [glm-4.6]
 #### CLI 使用方式
 ```bash
 # 强制启用 thinking
-llc chat --think "Analyze this algorithm"
+mcode chat --think "Analyze this algorithm"
 
 # 强制禁用 thinking
-llc chat --no-think "What is Python?"
+mcode chat --no-think "What is Python?"
 
 # 指定模式
-llc chat --thinking-mode=auto "Design a solution"
+mcode chat --thinking-mode=auto "Design a solution"
 
 # REPL 模式命令
 /think   # 启用 thinking
@@ -594,23 +594,23 @@ src/maxagent/
 #### 认证流程
 ```bash
 # 首次使用前需要认证
-llc auth copilot
+mcode auth copilot
 
 # 认证流程:
 # 1. 自动打开浏览器 https://github.com/login/device
 # 2. 输入显示的用户码 (如 ABCD-1234)
 # 3. 在 GitHub 上授权
-# 4. Token 自动保存到 ~/.llc/copilot/token.json
+# 4. Token 自动保存到 ~/.mcode/copilot/token.json
 ```
 
 #### 使用方式
 ```bash
 # 设置环境变量启用 Copilot
 export GITHUB_COPILOT=1
-llc chat "Hello!"
+mcode chat "Hello!"
 
 # 或在 REPL 中切换模型
-llc chat
+mcode chat
 /model gpt-4o
 /model claude-3.5-sonnet
 ```
@@ -629,9 +629,9 @@ GitHub Copilot 使用 `X-Initiator` header 追踪 premium requests:
 
 #### 管理命令
 ```bash
-llc auth status          # 查看认证状态
-llc auth logout copilot  # 登出 (删除本地 token)
-llc auth copilot --force # 强制重新认证
+mcode auth status          # 查看认证状态
+mcode auth logout copilot  # 登出 (删除本地 token)
+mcode auth copilot --force # 强制重新认证
 ```
 
 ### 快速开始
@@ -639,32 +639,32 @@ llc auth copilot --force # 强制重新认证
 ```bash
 # 使用智谱 GLM API
 export GLM_API_KEY="your-api-key"
-llc chat "Hello, introduce yourself"
+mcode chat "Hello, introduce yourself"
 
 # 使用 OpenAI API
 export OPENAI_API_KEY="your-api-key"
-llc chat "Hello, introduce yourself"
+mcode chat "Hello, introduce yourself"
 
 # 查看项目文件
-llc chat "What files are in the src directory?"
+mcode chat "What files are in the src directory?"
 
 # 编辑文件
-llc edit src/app.py "Add a health check endpoint"
+mcode edit src/app.py "Add a health check endpoint"
 
 # 执行复杂任务
-llc task "Implement user authentication feature"
+mcode task "Implement user authentication feature"
 
 # 测试命令
-llc test --detect              # 检测测试框架
-llc test --run                 # 运行所有测试
-llc test --run --coverage      # 运行测试并生成覆盖率报告
-llc test --run --watch         # 监视模式运行测试
-llc test --generate src/utils.py  # 使用 AI 为文件生成测试
+mcode test --detect              # 检测测试框架
+mcode test --run                 # 运行所有测试
+mcode test --run --coverage      # 运行测试并生成覆盖率报告
+mcode test --run --watch         # 监视模式运行测试
+mcode test --generate src/utils.py  # 使用 AI 为文件生成测试
 
 # Pipe Mode (JSONL 输出，适合脚本集成)
-llc chat -p "What is Python?" | jq
-llc edit -p src/app.py "Add logging" | jq
-llc task -p "Add error handling" | jq
+mcode chat -p "What is Python?" | jq
+mcode edit -p src/app.py "Add logging" | jq
+mcode task -p "Add error handling" | jq
 ```
 
 ### Pipe Mode 详解
@@ -689,17 +689,17 @@ Pipe mode 输出 JSONL (JSON Lines) 格式，每个事件一行 JSON：
 #### 使用场景
 ```bash
 # 提取响应内容
-llc chat -p "Explain Python" | jq -r '.content'
+mcode chat -p "Explain Python" | jq -r '.content'
 
 # 提取 patches
-llc edit -p src/app.py "Add logging" | jq -r '.patches[].content'
+mcode edit -p src/app.py "Add logging" | jq -r '.patches[].content'
 
 # 获取 token 使用量
-llc chat -p "Hello" | jq '.usage'
+mcode chat -p "Hello" | jq '.usage'
 
 # 批处理脚本集成
 for file in *.py; do
-  llc edit -p "$file" "Add docstrings" | jq -r '.patches[].content' > "${file}.patch"
+  mcode edit -p "$file" "Add docstrings" | jq -r '.patches[].content' > "${file}.patch"
 done
 ```
 
@@ -719,20 +719,20 @@ done
 #### 命令使用
 ```bash
 # 检测项目使用的测试框架
-llc test detect
-llc test --detect
-llc test -d
+mcode test detect
+mcode test --detect
+mcode test -d
 
 # 运行测试
-llc test run                   # 运行所有测试
-llc test run tests/test_utils.py  # 运行特定测试文件
-llc test run -v                # 详细输出
-llc test run -c                # 带覆盖率
-llc test run -w                # 监视模式
+mcode test run                   # 运行所有测试
+mcode test run tests/test_utils.py  # 运行特定测试文件
+mcode test run -v                # 详细输出
+mcode test run -c                # 带覆盖率
+mcode test run -w                # 监视模式
 
 # 生成测试 (使用 AI)
-llc test generate src/module.py    # 为指定文件生成测试
-llc test --generate src/module.py  # 同上
+mcode test generate src/module.py    # 为指定文件生成测试
+mcode test --generate src/module.py  # 同上
 ```
 
 ### Token 统计功能
@@ -746,7 +746,7 @@ llc test --generate src/module.py  # 同上
 #### REPL 模式命令
 ```bash
 # 进入 REPL 模式
-llc chat
+mcode chat
 
 # 查看 token 统计
 /tokens           # 显示详细统计表
@@ -790,53 +790,53 @@ MaxAgent 支持通过 HTTP 和 Stdio 两种传输方式连接 MCP 服务器，�
 | Stdio | 子进程 stdin/stdout 通信 | 本地 MCP 服务器 (如 mcp-searxng) |
 
 #### 配置存储
-- 配置文件: `~/.llc/mcp_servers.json`
+- 配置文件: `~/.mcode/mcp_servers.json`
 - 支持环境变量替换: `${VAR}` 格式
 
 #### CLI 命令
 ```bash
 # 添加 HTTP MCP 服务器
-llc mcp add web-reader https://api.example.com/mcp --header "Authorization: Bearer ${API_KEY}"
+mcode mcp add web-reader https://api.example.com/mcp --header "Authorization: Bearer ${API_KEY}"
 
 # 添加 Stdio MCP 服务器 (本地命令)
-llc mcp add searxng --command mcp-searxng --env "SEARXNG_URL=http://localhost:8888"
+mcode mcp add searxng --command mcp-searxng --env "SEARXNG_URL=http://localhost:8888"
 
 # 添加带参数的 Stdio 服务器
-llc mcp add myserver --command python --arg "-m" --arg "my_mcp_server"
+mcode mcp add myserver --command python --arg "-m" --arg "my_mcp_server"
 
 # 列出已配置的服务器
-llc mcp list
-llc mcp list -v  # 详细信息
+mcode mcp list
+mcode mcp list -v  # 详细信息
 
 # 测试服务器连接
-llc mcp test web-reader
+mcode mcp test web-reader
 
 # 列出所有 MCP 工具
-llc mcp tools
-llc mcp tools web-reader  # 指定服务器
+mcode mcp tools
+mcode mcp tools web-reader  # 指定服务器
 
 # 启用/禁用服务器
-llc mcp enable web-reader
-llc mcp disable web-reader
+mcode mcp enable web-reader
+mcode mcp disable web-reader
 
 # 移除服务器
-llc mcp remove web-reader
+mcode mcp remove web-reader
 
 # 查看配置文件
-llc mcp config
+mcode mcp config
 ```
 
 #### 智谱 GLM web_reader 集成示例 (HTTP)
 ```bash
 # 添加智谱 web_reader MCP 服务器
-llc mcp add web-reader https://open.bigmodel.cn/api/mcp/web_reader/mcp \
+mcode mcp add web-reader https://open.bigmodel.cn/api/mcp/web_reader/mcp \
     --header "Authorization: Bearer ${ZHIPU_KEY}"
 
 # 测试连接
-llc mcp test web-reader
+mcode mcp test web-reader
 
 # 在 chat 中使用
-llc chat "Use web-reader to fetch https://example.com and summarize it"
+mcode chat "Use web-reader to fetch https://example.com and summarize it"
 ```
 
 #### Searxng MCP 服务器示例 (Stdio)
@@ -845,13 +845,13 @@ llc chat "Use web-reader to fetch https://example.com and summarize it"
 pip install mcp-searxng
 
 # 添加 Stdio MCP 服务器
-llc mcp add searxng --command mcp-searxng --env "SEARXNG_URL=http://192.168.31.205:8888"
+mcode mcp add searxng --command mcp-searxng --env "SEARXNG_URL=http://192.168.31.205:8888"
 
 # 测试连接
-llc mcp test searxng
+mcode mcp test searxng
 
 # 在 chat 中使用
-llc chat "Search for Python tutorials using searxng"
+mcode chat "Search for Python tutorials using searxng"
 ```
 
 #### 技术实现

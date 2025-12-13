@@ -2,7 +2,7 @@
 
 This module supports configuring subagents independently from the main config.
 Users can place files under:
-  ~/.llc/agents/<agent>.md
+  ~/.mcode/agents/<agent>.md
 
 File format supports optional YAML front matter followed by markdown body.
 
@@ -43,7 +43,7 @@ def get_user_agents_dir(home: Optional[Path] = None) -> Path:
     """Return the directory containing agent profile markdown files."""
 
     base = home or Path.home()
-    return base / ".llc" / "agents"
+    return base / ".mcode" / "agents"
 
 
 def _parse_front_matter(text: str) -> Tuple[dict[str, Any], str]:
@@ -102,7 +102,7 @@ def _split_provider_model(value: str) -> Tuple[Optional[str], Optional[str]]:
 
 
 def load_agent_profile(agent_name: str, home: Optional[Path] = None) -> Optional[AgentProfile]:
-    """Load agent profile from ~/.llc/agents/<agent_name>.md.
+    """Load agent profile from ~/.mcode/agents/<agent_name>.md.
 
     Args:
         agent_name: Logical agent name (e.g. "coder", "architect", "tester", "shell")

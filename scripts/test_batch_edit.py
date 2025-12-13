@@ -73,8 +73,8 @@ def run_batch_edit_test():
         env = os.environ.copy()
         env["MAXAGENT_DEBUG_LOG"] = "1"  # 启用 debug 日志
         
-        # 运行 llc 命令
-        print("\n🚀 运行 llc edit 命令...")
+        # 运行 mcode 命令
+        print("\n🚀 运行 mcode edit 命令...")
         result = subprocess.run(
             ["python", "-m", "maxagent", "edit", test_file, task],
             cwd=test_dir,

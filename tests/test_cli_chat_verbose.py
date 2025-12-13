@@ -1,4 +1,4 @@
-"""Tests for llc chat verbose formatting helpers."""
+"""Tests for mcode chat verbose formatting helpers."""
 
 from __future__ import annotations
 

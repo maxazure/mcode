@@ -91,25 +91,25 @@ def task(
     Examples:
 
         # Basic task
-        llc task "Add a /health endpoint to the API"
+        mcode task "Add a /health endpoint to the API"
 
         # Auto-apply changes
-        llc task "Refactor user authentication" --apply
+        mcode task "Refactor user authentication" --apply
 
         # Skip tests
-        llc task "Add logging to database module" --skip-tests
+        mcode task "Add logging to database module" --skip-tests
 
         # Quick task (skip analysis)
-        llc task "Fix typo in README" --skip-architect
+        mcode task "Fix typo in README" --skip-architect
 
         # Pipe mode for programmatic use
-        llc task "Add error handling" -p | jq
+        mcode task "Add error handling" -p | jq
 
         # YOLO mode for unrestricted file access
-        llc task "Update ~/config/settings.json" --yolo
+        mcode task "Update ~/config/settings.json" --yolo
 
         # Limit tool iterations
-        llc task "Complex refactoring" --max-iterations 50
+        mcode task "Complex refactoring" --max-iterations 50
     """
     if description is None:
         if pipe:
@@ -117,8 +117,8 @@ def task(
             print(json.dumps(error_output, ensure_ascii=False))
         else:
             console.print("[yellow]Please provide a task description[/yellow]")
-            console.print('\nUsage: llc task "your task description"')
-            console.print('\nExample: llc task "Add a new API endpoint for user profile"')
+            console.print('\nUsage: mcode task "your task description"')
+            console.print('\nExample: mcode task "Add a new API endpoint for user profile"')
         raise typer.Exit(0)
 
     # Get global options from context

@@ -278,7 +278,7 @@ async def run_all_tests(verbose: bool = True):
     
     if not api_key:
         print("❌ 错误: 需要设置 GLM_API_KEY 或 ZHIPU_KEY 环境变量")
-        print("   或者运行 llc 命令会自动从配置加载")
+        print("   或者运行 mcode 命令会自动从配置加载")
         return []
     
     # 创建 LLM 客户端

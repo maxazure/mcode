@@ -1129,8 +1129,8 @@ The sub-agent has access to the same tools as the main agent."""
                     error_msg = (
                         f"Authentication failed for subagent '{agent_type}': "
                         f"Agent profile requires GitHub Copilot but authentication failed. "
-                        f"Either run 'llc auth login' to authenticate with GitHub Copilot, "
-                        f"or update the agent profile at ~/.llc/agents/{agent_type}.md to use a different provider."
+                        f"Either run 'mcode auth login' to authenticate with GitHub Copilot, "
+                        f"or update the agent profile at ~/.mcode/agents/{agent_type}.md to use a different provider."
                     )
                 else:
                     error_msg = (

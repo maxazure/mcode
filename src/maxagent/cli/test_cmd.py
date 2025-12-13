@@ -277,19 +277,19 @@ def test_main(
     Examples:
 
         # Detect testing framework
-        llc test --detect
+        mcode test --detect
 
         # Run all tests
-        llc test --run
+        mcode test --run
 
         # Run tests for a specific file
-        llc test --run src/utils.py
+        mcode test --run src/utils.py
 
         # Generate tests for a file
-        llc test --generate src/utils.py
+        mcode test --generate src/utils.py
 
         # Run tests with coverage
-        llc test --run --coverage
+        mcode test --run --coverage
     """
     # Default: if no options, show detect info
     if not any([detect, run, generate]):
@@ -304,7 +304,7 @@ def test_main(
     elif generate:
         if not file:
             console.print("[red]Please specify a file to generate tests for[/]")
-            console.print("\nUsage: llc test --generate src/module.py")
+            console.print("\nUsage: mcode test --generate src/module.py")
             raise typer.Exit(1)
         asyncio.run(_generate_tests(project_root, file, verbose))
 
@@ -361,8 +361,8 @@ def _show_framework_info(project_root: Path, verbose: bool = False) -> None:
         console.print("  - For Go: Tests are built-in")
         console.print("  - For Rust: Tests are built-in")
     else:
-        console.print("Run tests with: [bold green]llc test --run[/]")
-        console.print("Generate tests: [bold blue]llc test --generate <file>[/]")
+        console.print("Run tests with: [bold green]mcode test --run[/]")
+        console.print("Generate tests: [bold blue]mcode test --generate <file>[/]")
 
     if verbose and info.test_dir:
         console.print("\n[bold]Test files found:[/]")

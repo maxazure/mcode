@@ -6,7 +6,7 @@ from pathlib import Path
 
 # Enable -h as alias for --help
 app = typer.Typer(
-    name="llc",
+    name="mcode",
     help="MaxAgent - AI Code Assistant CLI based on LiteLLM",
     add_completion=True,
     no_args_is_help=True,

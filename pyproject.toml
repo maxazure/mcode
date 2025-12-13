@@ -50,7 +50,7 @@ all = [
 ]
 
 [project.scripts]
-llc = "maxagent.cli.main:cli"
+mcode = "maxagent.cli.main:cli"
 maxagent = "maxagent.cli.main:cli"
 
 [project.urls]

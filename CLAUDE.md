@@ -17,13 +17,13 @@ MaxAgent/
 ├── src/maxagent/
 │   ├── cli/           # CLI 命令入口
 │   │   ├── main.py    # 主入口, 注册所有子命令
-│   │   ├── chat.py    # llc chat 命令
-│   │   ├── edit.py    # llc edit 命令
-│   │   ├── task.py    # llc task 命令
-│   │   ├── test_cmd.py    # llc test 命令
-│   │   ├── auth_cmd.py    # llc auth 命令
-│   │   ├── config_cmd.py  # llc config 命令
-│   │   └── mcp_cmd.py     # llc mcp 命令
+│   │   ├── chat.py    # mcode chat 命令
+│   │   ├── edit.py    # mcode edit 命令
+│   │   ├── task.py    # mcode task 命令
+│   │   ├── test_cmd.py    # mcode test 命令
+│   │   ├── auth_cmd.py    # mcode auth 命令
+│   │   ├── config_cmd.py  # mcode config 命令
+│   │   └── mcp_cmd.py     # mcode mcp 命令
 │   ├── core/          # 核心 Agent 逻辑
 │   │   ├── agent.py       # Agent 主类
 │   │   ├── orchestrator.py    # 多 Agent 编排
@@ -68,15 +68,15 @@ MaxAgent/
 │       └── tokens.py      # Token 计算
 ├── tests/             # 测试文件
 ├── docs/              # 文档
-├── .llc.yaml          # 项目配置 (可选)
+├── .mcode.yaml          # 项目配置 (可选)
 ├── MAXAGENT.md        # 项目指令文件
 └── pyproject.toml     # 项目配置
 ```
 
 ## 重要注意
 每次运行测试前请确保在 .venv 环境
-每次运行  llc 命令前请确保运行 pip install -e .
-每次测试后请确保 安装 llc 到用户 bin 文件夹中
+每次运行  mcode 命令前请确保运行 pip install -e .
+每次测试后请确保 安装 mcode 到用户 bin 文件夹中
 
 
 ## 开发环境设置
@@ -100,13 +100,13 @@ mypy src/
 ## 常用命令
 
 ```bash
-# 安装/更新 llc 命令
+# 安装/更新 mcode 命令
 pip install -e .
 
 # 运行 CLI
-llc chat "问题"
-llc chat --model gpt-4.1 "问题"   # 自动选择 GitHub Copilot
-llc chat --model glm-4.6 "问题"   # 自动选择 GLM
+mcode chat "问题"
+mcode chat --model gpt-4.1 "问题"   # 自动选择 GitHub Copilot
+mcode chat --model glm-4.6 "问题"   # 自动选择 GLM
 
 # 运行测试
 pytest tests/ -v
@@ -116,7 +116,7 @@ pytest tests/ --cov=src/maxagent # 带覆盖率
 
 ## 配置文件
 
-### 全局配置: `~/.llc/config.yaml`
+### 全局配置: `~/.mcode/config.yaml`
 
 ```yaml
 litellm:
@@ -132,7 +132,7 @@ model:
       max_tokens: 128000
 ```
 
-### 项目配置: `.llc.yaml`
+### 项目配置: `.mcode.yaml`
 
 项目根目录的配置会覆盖全局配置。
 
@@ -182,7 +182,7 @@ chore: 构建/工具相关
 
 ## 注意事项
 
-1. **不要硬编码配置**: 模型映射等配置应从 `~/.llc/config.yaml` 动态读取
+1. **不要硬编码配置**: 模型映射等配置应从 `~/.mcode/config.yaml` 动态读取
 2. **避免重复读取文件**: 已读取的文件内容会缓存，避免重复调用
 3. **批量操作**: 多个文件修改应尽量在一次 edit 中完成
 4. **测试优先**: 修改核心逻辑前先确保有测试覆盖
@@ -197,5 +197,5 @@ GLM_BASE_URL=https://open.bigmodel.cn/api/coding/paas/v4
 ```
 
 GitHub Copilot (使用 OAuth 认证)
-运行 llc auth copilot 进行认证
+运行 mcode auth copilot 进行认证
 

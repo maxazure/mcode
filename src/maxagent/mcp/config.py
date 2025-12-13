@@ -126,7 +126,7 @@ class MCPConfig(BaseModel):
 
 def get_mcp_config_path() -> Path:
     """Get the MCP configuration file path"""
-    config_dir = Path.home() / ".llc"
+    config_dir = Path.home() / ".mcode"
     config_dir.mkdir(parents=True, exist_ok=True)
     return config_dir / "mcp_servers.json"
 

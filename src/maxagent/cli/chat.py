@@ -234,14 +234,14 @@ def chat(
     Chat with the AI assistant.
 
     Examples:
-        llc chat "Explain this code"
-        llc chat --think "Analyze this complex algorithm"
-        llc chat --thinking-mode=auto "Design a solution"
-        llc chat -p "What is Python?" | jq  # Pipe mode with JSONL output
-        llc chat --yolo "Read ~/some/file.txt"  # YOLO mode for unrestricted access
-        llc chat --debug-context "Research this topic"  # Show context usage
-        llc chat --max-iterations 50 "Complex task"  # Limit tool iterations
-        llc chat  # Enter REPL mode
+        mcode chat "Explain this code"
+        mcode chat --think "Analyze this complex algorithm"
+        mcode chat --thinking-mode=auto "Design a solution"
+        mcode chat -p "What is Python?" | jq  # Pipe mode with JSONL output
+        mcode chat --yolo "Read ~/some/file.txt"  # YOLO mode for unrestricted access
+        mcode chat --debug-context "Research this topic"  # Show context usage
+        mcode chat --max-iterations 50 "Complex task"  # Limit tool iterations
+        mcode chat  # Enter REPL mode
     """
     # Get global options from context
     global_opts = ctx.obj or {}

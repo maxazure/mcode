@@ -136,25 +136,25 @@ def add_server(
 
     Examples:
         # HTTP transport
-        llc mcp add web-reader https://example.com/mcp
+        mcode mcp add web-reader https://example.com/mcp
 
         # With authentication header
-        llc mcp add web-reader https://api.example.com/mcp --header "Authorization: Bearer token123"
+        mcode mcp add web-reader https://api.example.com/mcp --header "Authorization: Bearer token123"
 
         # Stdio transport (native style)
-        llc mcp add searxng --command mcp-searxng --env "SEARXNG_URL=http://localhost:8888"
+        mcode mcp add searxng --command mcp-searxng --env "SEARXNG_URL=http://localhost:8888"
 
         # Stdio transport with arguments
-        llc mcp add myserver --command python --arg "-m" --arg "my_mcp_server"
+        mcode mcp add myserver --command python --arg "-m" --arg "my_mcp_server"
 
         # Claude-compatible style (with -- separator)
-        llc mcp add searxng --scope user --transport stdio -- env SEARXNG_URL=http://localhost:8888 mcp-searxng
+        mcode mcp add searxng --scope user --transport stdio -- env SEARXNG_URL=http://localhost:8888 mcp-searxng
 
         # Claude-compatible with command arguments
-        llc mcp add myserver --transport stdio -- env KEY=VALUE python -m my_mcp_server
+        mcode mcp add myserver --transport stdio -- env KEY=VALUE python -m my_mcp_server
 
         # Project-level configuration
-        llc mcp add local-server --scope project --command ./local-mcp.sh
+        mcode mcp add local-server --scope project --command ./local-mcp.sh
     """
     # Check for Claude-style arguments after '--'
     # These are pre-processed and stored in _claude_extra_args
@@ -204,7 +204,7 @@ def add_server(
     if transport == "stdio" and not command:
         console.print("[red]Error: --command is required for stdio transport[/]")
         console.print(
-            "[dim]Tip: Use Claude-style syntax: llc mcp add <name> --transport stdio -- env KEY=VALUE command[/]"
+            "[dim]Tip: Use Claude-style syntax: mcode mcp add <name> --transport stdio -- env KEY=VALUE command[/]"
         )
         raise typer.Exit(1)
 
@@ -288,8 +288,8 @@ def remove_server(
     Remove an MCP server.
 
     Examples:
-        llc mcp remove web-reader
-        llc mcp remove web-reader --force
+        mcode mcp remove web-reader
+        mcode mcp remove web-reader --force
     """
     config = load_mcp_config()
 
@@ -328,15 +328,15 @@ def list_servers(
     List all configured MCP servers and test their connection status.
 
     Examples:
-        llc mcp list
-        llc mcp list -v
-        llc mcp list --no-test
+        mcode mcp list
+        mcode mcp list -v
+        mcode mcp list --no-test
     """
     servers = list_mcp_servers()
 
     if not servers:
         console.print("[dim]No MCP servers configured[/]")
-        console.print("\nUse [bold]llc mcp add[/] to add a server")
+        console.print("\nUse [bold]mcode mcp add[/] to add a server")
         return
 
     # Test connections if not skipped
@@ -440,7 +440,7 @@ def enable_server(
     Enable an MCP server.
 
     Examples:
-        llc mcp enable web-reader
+        mcode mcp enable web-reader
     """
     config = load_mcp_config()
 
@@ -461,7 +461,7 @@ def disable_server(
     Disable an MCP server.
 
     Examples:
-        llc mcp disable web-reader
+        mcode mcp disable web-reader
     """
     config = load_mcp_config()
 
@@ -482,7 +482,7 @@ def test_server(
     Test connection to an MCP server.
 
     Examples:
-        llc mcp test web-reader
+        mcode mcp test web-reader
     """
     config = load_mcp_config()
 
@@ -545,8 +545,8 @@ def list_tools(
     List tools from MCP servers.
 
     Examples:
-        llc mcp tools                  # List all tools from all servers
-        llc mcp tools web-reader       # List tools from specific server
+        mcode mcp tools                  # List all tools from all servers
+        mcode mcp tools web-reader       # List tools from specific server
     """
     asyncio.run(_list_tools(name))
 
@@ -601,7 +601,7 @@ def show_config() -> None:
     Show MCP configuration file path and content.
 
     Examples:
-        llc mcp config
+        mcode mcp config
     """
     config_path = get_mcp_config_path()
     console.print(f"[bold]Config file:[/] {config_path}")

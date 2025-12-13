@@ -22,7 +22,7 @@ COPILOT_TOKEN_URL = "https://api.github.com/copilot_internal/v2/token"
 COPILOT_CHAT_URL = "https://api.githubcopilot.com/chat/completions"
 
 # Token storage location
-DEFAULT_TOKEN_DIR = Path.home() / ".llc" / "copilot"
+DEFAULT_TOKEN_DIR = Path.home() / ".mcode" / "copilot"
 DEFAULT_TOKEN_FILE = "token.json"
 
 # Editor headers required by Copilot API
@@ -333,7 +333,7 @@ class GitHubCopilotAuth:
                 pass
 
         # No valid token, need full authentication
-        raise ValueError("No valid Copilot token. Please run 'llc auth copilot' to authenticate.")
+        raise ValueError("No valid Copilot token. Please run 'mcode auth copilot' to authenticate.")
 
     async def authenticate(self, callback: Optional[Any] = None) -> CopilotToken:
         """Full authentication flow

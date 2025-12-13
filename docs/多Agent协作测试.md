@@ -22,7 +22,7 @@
 ./scripts/test_multiagent.sh
 
 # 或手动执行
-llc chat --trace "请使用 subagent 创建企业网站"
+mcode chat --trace "请使用 subagent 创建企业网站"
 ```
 
 ## 测试场景 1: 自动调用 SubAgent
@@ -53,10 +53,10 @@ llc chat --trace "请使用 subagent 创建企业网站"
 
 ```bash
 # 基础测试
-llc chat "请为一家名为云智科技的AI公司创建企业官网，使用subagent分别调用web_content、web_designer、web_frontend完成"
+mcode chat "请为一家名为云智科技的AI公司创建企业官网，使用subagent分别调用web_content、web_designer、web_frontend完成"
 
 # 带调试日志
-MAXAGENT_DEBUG_LOG=/tmp/multiagent_test.log llc chat --trace "请为一家名为云智科技的AI公司创建企业官网，使用subagent分别调用web_content、web_designer、web_frontend完成"
+MAXAGENT_DEBUG_LOG=/tmp/multiagent_test.log mcode chat --trace "请为一家名为云智科技的AI公司创建企业官网，使用subagent分别调用web_content、web_designer、web_frontend完成"
 ```
 
 ## 测试场景 2: 自动协作链

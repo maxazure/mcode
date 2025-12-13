@@ -120,7 +120,7 @@ class TestApplyEnvVars:
 
     def test_model_override(self, monkeypatch, clean_env):
         """Test model override"""
-        monkeypatch.setenv("LLC_MODEL", "custom-model")
+        monkeypatch.setenv("MCODE_MODEL", "custom-model")
 
         config_data = {}
         result = _apply_env_vars(config_data)
@@ -129,7 +129,7 @@ class TestApplyEnvVars:
 
     def test_temperature_override(self, monkeypatch, clean_env):
         """Test temperature override"""
-        monkeypatch.setenv("LLC_TEMPERATURE", "0.5")
+        monkeypatch.setenv("MCODE_TEMPERATURE", "0.5")
 
         config_data = {}
         result = _apply_env_vars(config_data)
@@ -138,7 +138,7 @@ class TestApplyEnvVars:
 
     def test_invalid_temperature(self, monkeypatch, clean_env):
         """Test invalid temperature is ignored"""
-        monkeypatch.setenv("LLC_TEMPERATURE", "invalid")
+        monkeypatch.setenv("MCODE_TEMPERATURE", "invalid")
 
         config_data = {}
         result = _apply_env_vars(config_data)
@@ -307,10 +307,10 @@ class TestConfigPaths:
         """Test user config path"""
         path = get_user_config_path()
         assert path.name == "config.yaml"
-        assert ".llc" in str(path)
+        assert ".mcode" in str(path)
 
     def test_get_project_config_path(self, temp_dir):
         """Test project config path"""
         path = get_project_config_path(temp_dir)
-        assert path.name == ".llc.yaml"
+        assert path.name == ".mcode.yaml"
         assert temp_dir in path.parents or path.parent == temp_dir

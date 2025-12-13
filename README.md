@@ -10,7 +10,7 @@
 - 🧪 **测试命令**: 测试框架检测、运行测试、AI 生成测试
 - 🔧 **工具调用**: 文件操作、代码搜索、命令执行、Web 抓取
 - 🧩 **SubAgent 委派**: 对话内可调用 `subagent`/`task`，包含 `shell` 子 agent 用于跑命令/装依赖并汇报，减少主上下文噪音
-- 🧭 **Tool Planner (可选)**: agent 侧自动批量/并行独立只读工具调用，减少轮次与延迟（`model.enable_tool_planner=true` 或 `llc chat --tool-planner`）
+- 🧭 **Tool Planner (可选)**: agent 侧自动批量/并行独立只读工具调用，减少轮次与延迟（`model.enable_tool_planner=true` 或 `mcode chat --tool-planner`）
 - 🧠 **Deep Thinking**: 支持 GLM/DeepSeek thinking 模型
 - 📊 **Token 统计**: 实时追踪 token 用量和费用
 - 🗂️ **上下文汇总**: 长对话自动滚动摘要 + 长期记忆
@@ -64,61 +64,61 @@ export GITHUB_COPILOT=1
 
 ```bash
 # 首次使用会自动提示 OAuth 认证（也可手动执行）
-llc auth copilot
+mcode auth copilot
 
 # 查看认证状态
-llc auth status
+mcode auth status
 
 # 登出
-llc auth logout copilot
+mcode auth logout copilot
 ```
 
 ## 快速开始
 
 ```bash
 # 查看帮助
-llc -h
-llc chat -h
+mcode -h
+mcode chat -h
 
 # 开始对话
-llc chat "解释这段代码的作用"
+mcode chat "解释这段代码的作用"
 
 # 使用 thinking 模式 (适合复杂问题)
-llc chat --think "分析这个算法的复杂度"
+mcode chat --think "分析这个算法的复杂度"
 
 # Pipe 模式 (JSONL 输出，用于程序化调用)
-llc chat -p "What is Python?" | jq
+mcode chat -p "What is Python?" | jq
 
 # 编辑文件
-llc edit src/app.py "添加错误处理"
+mcode edit src/app.py "添加错误处理"
 
 # 执行任务 (多 Agent 协作)
-llc task "为 UserService 添加 email 查询接口"
+mcode task "为 UserService 添加 email 查询接口"
 
 # 测试命令
-llc test --detect           # 检测测试框架
-llc test --run              # 运行测试
-llc test --run --coverage   # 带覆盖率
-llc test --generate src/utils.py  # AI 生成测试
+mcode test --detect           # 检测测试框架
+mcode test --run              # 运行测试
+mcode test --run --coverage   # 带覆盖率
+mcode test --generate src/utils.py  # AI 生成测试
 ```
 
 ## 命令详解
 
-### llc chat - 智能对话
+### mcode chat - 智能对话
 
 ```bash
 # 基本用法
-llc chat "你的问题"
+mcode chat "你的问题"
 
 # 选项
-llc chat -m gpt-4o "问题"          # 指定模型
-llc chat --think "复杂问题"        # 启用深度思考
-llc chat --no-think "简单问题"     # 禁用思考
-llc chat --no-tools "问题"         # 禁用工具调用
-llc chat -p "问题"                 # Pipe 模式 (JSONL 输出)
+mcode chat -m gpt-4o "问题"          # 指定模型
+mcode chat --think "复杂问题"        # 启用深度思考
+mcode chat --no-think "简单问题"     # 禁用思考
+mcode chat --no-tools "问题"         # 禁用工具调用
+mcode chat -p "问题"                 # Pipe 模式 (JSONL 输出)
 
 # REPL 模式 (交互式)
-llc chat
+mcode chat
 ```
 
 #### Pipe 模式 (-p)
@@ -127,13 +127,13 @@ Pipe 模式输出 JSONL 格式，适合程序化调用：
 
 ```bash
 # 基本使用
-llc chat -p "What is Python?"
+mcode chat -p "What is Python?"
 
 # 配合 jq 处理
-llc chat -p "Explain recursion" | jq '.content'
+mcode chat -p "Explain recursion" | jq '.content'
 
 # 在脚本中使用
-response=$(llc chat -p "Generate a function" | jq -r '.content')
+response=$(mcode chat -p "Generate a function" | jq -r '.content')
 ```
 
 输出格式：
@@ -157,45 +157,45 @@ clear    - 清空历史
 exit     - 退出
 ```
 
-### llc edit - 文件编辑
+### mcode edit - 文件编辑
 
 ```bash
-llc edit <file> "修改说明"
-llc edit src/app.py "添加日志记录"
+mcode edit <file> "修改说明"
+mcode edit src/app.py "添加日志记录"
 ```
 
-### llc task - 任务执行
+### mcode task - 任务执行
 
 ```bash
-llc task "需求描述"
-llc task --apply "需求描述"     # 自动应用修改
-llc task --skip-tests "需求"    # 跳过测试生成
+mcode task "需求描述"
+mcode task --apply "需求描述"     # 自动应用修改
+mcode task --skip-tests "需求"    # 跳过测试生成
 ```
 
-### llc test - 测试命令
+### mcode test - 测试命令
 
 ```bash
-llc test detect                  # 检测测试框架
-llc test run                     # 运行测试
-llc test run -c                  # 带覆盖率
-llc test run -w                  # 监视模式
-llc test generate <file>         # AI 生成测试
+mcode test detect                  # 检测测试框架
+mcode test run                     # 运行测试
+mcode test run -c                  # 带覆盖率
+mcode test run -w                  # 监视模式
+mcode test generate <file>         # AI 生成测试
 ```
 
-### llc config - 配置管理
+### mcode config - 配置管理
 
 ```bash
-llc config show                  # 显示当前配置
-llc config init                  # 初始化配置文件
+mcode config show                  # 显示当前配置
+mcode config init                  # 初始化配置文件
 ```
 
-### llc auth - 认证管理
+### mcode auth - 认证管理
 
 ```bash
-llc auth copilot                 # GitHub Copilot OAuth 认证
-llc auth copilot --force         # 强制重新认证
-llc auth status                  # 查看认证状态
-llc auth logout copilot          # 登出
+mcode auth copilot                 # GitHub Copilot OAuth 认证
+mcode auth copilot --force         # 强制重新认证
+mcode auth status                  # 查看认证状态
+mcode auth logout copilot          # 登出
 ```
 
 ## 支持的 API Provider
@@ -236,7 +236,7 @@ export LLC_MODEL="copilot-gpt-4.1"
 # export LITELLM_API_KEY="your-master-key"
 ```
 
-然后正常使用 `llc chat ...` 即可。
+然后正常使用 `mcode chat ...` 即可。
 
 ## Thinking 模型支持
 

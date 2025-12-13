@@ -58,13 +58,13 @@
 
 ```bash
 # 基础测试
-llc chat "上述提示词内容"
+mcode chat "上述提示词内容"
 
 # 带 trace 调试
-llc chat --trace "上述提示词内容"
+mcode chat --trace "上述提示词内容"
 
 # 带完整日志
-MAXAGENT_DEBUG_LOG=/tmp/test.log llc chat --trace "上述提示词内容"
+MAXAGENT_DEBUG_LOG=/tmp/test.log mcode chat --trace "上述提示词内容"
 ```
 
 ## 验证结果
