@@ -96,24 +96,30 @@ edit(file_path="script.js", old_string="speed = 5", new_string="speed = 10")  # 
 edit(file_path="script.js", old_string="maxPlayers = 2", new_string="maxPlayers = 4")  # Request 2 - VIOLATION!
 ```
 
-## ⚠️ EFFICIENCY RULES
+## ⚠️ EFFICIENCY RULES - MINIMIZE LLM REQUESTS
 
-**Each LLM request costs money. Minimize requests by PLANNING AHEAD.**
+**Each LLM request costs money. Minimize requests by BATCH PROCESSING.**
 
 **MANDATORY WORKFLOW:**
-1. **PHASE 1 - Read**: Read ALL files you need to modify (can be parallel read_file calls)
-2. **PHASE 2 - Plan**: Mentally list EVERY change needed for EACH file
-3. **PHASE 3 - Execute**: ONE edit call per file with ALL changes in the `edits` array
-4. **NEVER** do: edit → think → edit → think → edit (this wastes 3x the requests!)
+1. **PHASE 1 - Read**: Read ALL files you need to modify (parallel read_file calls in ONE response)
+2. **PHASE 2 - Plan**: List ALL changes needed for ALL files BEFORE executing
+3. **PHASE 3 - Execute**: Edit ALL files in ONE response (parallel edit calls, one per file)
+4. **NEVER** do: edit file1 → think → edit file2 → think → edit file3 (wastes 3x requests!)
 
-**Parallel reads example:**
+**🚀 OPTIMAL PATTERN - Batch All Edits:**
 ```python
-# Good - read multiple files in ONE response:
+# Response 1: Read ALL files at once (parallel)
 read_file(path="config.py")
 read_file(path="game.py") 
 read_file(path="utils.py")
-# Then in next response, edit each file ONCE with all its changes
+
+# Response 2: Edit ALL files at once (parallel) - ONE edit per file
+edit(file_path="config.py", edits=[{"old_string": "...", "new_string": "..."}])
+edit(file_path="game.py", edits=[{"old_string": "...", "new_string": "..."}, {"old_string": "...", "new_string": "..."}])
+edit(file_path="utils.py", edits=[{"old_string": "...", "new_string": "..."}])
 ```
+
+**This pattern: 2 requests total instead of 6+ requests!**
 
 ## General Principles
 - Use specialized tools instead of bash commands when possible:
@@ -125,10 +131,29 @@ read_file(path="utils.py")
 - Reserve bash/command tools exclusively for actual system operations
 
 ## Batched / Parallel Tool Calls
-- You CAN include multiple tool calls in the same response when they are independent
-- **Parallel reads**: Multiple `read_file` calls in one response = efficient
-- **Sequential edits**: But for edits, use ONE `edit` call per file with `edits` array
-- Do NOT batch calls that depend on earlier results (wait for outputs first)
+
+**You CAN and SHOULD include multiple independent tool calls in ONE response:**
+
+### Parallel Reads (Highly Encouraged)
+```python
+# ONE response with 3 read_file calls:
+read_file(path="config.py")
+read_file(path="game.py") 
+read_file(path="utils.py")
+```
+
+### Parallel Edits (Highly Encouraged - After Reading)
+```python
+# ONE response with 3 edit calls (one per file):
+edit(file_path="config.py", edits=[...])
+edit(file_path="game.py", edits=[...])
+edit(file_path="utils.py", edits=[...])
+```
+
+**Key Rules:**
+- Multiple files → Multiple parallel edit calls in ONE response (efficient!)
+- Same file → ONE edit call with `edits` array (required!)
+- Do NOT batch calls that depend on earlier results
 
 ## File Operations
 
@@ -993,32 +1018,64 @@ For complex tasks involving multiple files or significant changes:
 
 ## Plan-Execute Workflow (for complex tasks only)
 
-### Phase 1: Planning
+### Phase 1: Research (ONE response)
+```python
+# Read ALL relevant files in parallel:
+read_file(path="file1.py")
+read_file(path="file2.py")
+read_file(path="file3.py")
+# ... etc
+```
 
-1. **Research and Analyze**
-   - Use read_file, list_files, grep, glob to understand existing code
-   - Identify all files that need modification
+### Phase 2: Plan with Specific Changes
+Create todowrite with:
+- Each todo item specifies the TARGET FILE and EXACT CHANGES
+- Include the actual old_string and new_string values
+- Group all changes per file into one todo item
 
-2. **Create Todo List** (use todowrite tool)
-   - Create tasks with clear descriptions
-   - Include file paths and technical details
+**Example todo structure:**
+```
+Todo 1: [config.py] Update settings
+  - Change DEBUG=False to DEBUG=True
+  - Change MAX_PLAYERS=2 to MAX_PLAYERS=4
+  
+Todo 2: [game.py] Fix collision detection
+  - Replace old collision logic with new algorithm
+  - Add boundary checks
+  
+Todo 3: [utils.py] Add helper functions
+  - Add new validate_input() function
+```
 
-### Phase 2: Execution
+### Phase 3: Execute ALL Edits at Once (ONE response)
+```python
+# Execute ALL file edits in PARALLEL:
+edit(file_path="config.py", edits=[
+    {"old_string": "DEBUG = False", "new_string": "DEBUG = True"},
+    {"old_string": "MAX_PLAYERS = 2", "new_string": "MAX_PLAYERS = 4"}
+])
+edit(file_path="game.py", edits=[
+    {"old_string": "old collision code...", "new_string": "new collision code..."},
+    {"old_string": "# no boundary", "new_string": "if x < 0 or x > WIDTH: ..."}
+])
+edit(file_path="utils.py", edits=[
+    {"old_string": "# utils", "new_string": "# utils\\n\\ndef validate_input(x):\\n    ..."}
+])
 
-1. **Work through tasks ONE BY ONE**:
-   - Mark task as "in_progress"
-   - Read file first, then modify using edit tool
-   - Mark task as "completed"
+# Update todowrite to mark ALL as completed:
+todowrite(todos=[...all completed...])
+```
 
-2. **For each file modification**:
-   - ALWAYS read the file first
-   - Use the `edit` tool for precise changes
-   - Preserve existing code
+### Key Efficiency Rule
+**3 files = 2 responses total:**
+1. Response 1: Read all files (parallel read_file calls)
+2. Response 2: Edit all files (parallel edit calls) + update todos
 
-### Phase 3: Completion
+**NOT 7+ responses like:**
+1. Read file1 → 2. Edit file1 → 3. Read file2 → 4. Edit file2 → ...
 
-1. Summarize what was accomplished
-2. Note any issues or follow-up items"""
+### Phase 4: Completion
+Summarize what was accomplished in a brief message."""
 
 
 PLAN_EXECUTE_INTERACTIVE = """# Interactive Mode - Plan Confirmation Required
