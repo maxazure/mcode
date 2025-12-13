@@ -61,11 +61,12 @@ class Orchestrator:
         self.allow_outside_project = allow_outside_project
         self.max_iterations = max_iterations
 
-        # Create LLM client if not provided
-        if llm_client is None:
-            self.llm = create_llm_client(config)
-        else:
-            self.llm = llm_client
+        # Optional shared LLM client (kept for backwards-compat). When per-agent
+        # overrides are present, `create_agent` will create an override client.
+        self.llm = llm_client
+
+        # LLM client cache per agent_name
+        self._llm_clients: dict[str, LLMClient] = {}
 
         # Create tool registry if not provided
         if tool_registry is None:
@@ -98,11 +99,19 @@ class Orchestrator:
     def _get_agent(self, agent_name: str) -> Agent:
         """Get or create an agent by name"""
         if agent_name not in self._agents:
+            # Create/choose an LLM client for this agent.
+            llm = self.llm
+            if llm is None:
+                llm = self._llm_clients.get(agent_name)
+            if llm is None:
+                llm = create_llm_client(self.config)
+                self._llm_clients[agent_name] = llm
+
             self._agents[agent_name] = create_agent(
                 config=self.config,
                 project_root=self.project_root,
                 agent_name=agent_name,
-                llm_client=self.llm,
+                llm_client=llm,
                 tool_registry=self.tools,
                 max_iterations=self.max_iterations,
             )

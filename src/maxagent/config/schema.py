@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -30,7 +31,7 @@ PROVIDER_DEFAULTS = {
         "model": "gpt-4",
     },
     APIProvider.GLM: {
-        "base_url": "https://open.bigmodel.cn/api/paas/v4",
+        "base_url": os.getenv("GLM_BASE_URL") or "https://open.bigmodel.cn/api/coding/paas/v4",
         "model": "glm-4.6",
     },
     APIProvider.GITHUB_COPILOT: {
@@ -52,12 +53,33 @@ class LiteLLMConfig(BaseModel):
         description="API provider type",
     )
     base_url: str = Field(
-        default="http://localhost:4000",
+        default=os.getenv("LITELLM_BASE_URL") or os.getenv("GLM_BASE_URL") or "http://localhost:4000",
         description="API base URL",
     )
     api_key: str = Field(
         default="",
         description="API key for authentication",
+    )
+
+
+class ModelSpecificConfig(BaseModel):
+    """Configuration for a specific model"""
+
+    max_tokens: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Maximum tokens in response for this model",
+    )
+    context_length: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Maximum context window size for this model",
+    )
+    temperature: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature for this model",
     )
 
 
@@ -89,13 +111,29 @@ class ModelConfig(BaseModel):
     max_tokens: int = Field(
         default=4096,
         gt=0,
-        description="Maximum tokens in response",
+        description="Maximum tokens in response (default for all models)",
+    )
+    context_length: int = Field(
+        default=128000,
+        gt=0,
+        description="Default context window size (can be overridden per model)",
     )
     max_iterations: int = Field(
         default=100,
         gt=0,
         le=1000,
         description="Maximum tool call iterations per request",
+    )
+    parallel_tool_calls: bool = Field(
+        default=True,
+        description="Allow the model to return multiple tool calls in one response",
+    )
+    enable_tool_planner: bool = Field(
+        default=False,
+        description=(
+            "Enable agent-side tool planner to batch/parallelize independent read-only tool calls "
+            "to reduce round-trips"
+        ),
     )
     # Available models for quick switching
     available_models: list[str] = Field(
@@ -119,6 +157,11 @@ class ModelConfig(BaseModel):
         ],
         description="List of available models for quick switching",
     )
+    # Model-specific configurations
+    models: dict[str, ModelSpecificConfig] = Field(
+        default_factory=dict,
+        description="Per-model configurations for max_tokens, context_length, temperature",
+    )
 
 
 class ToolsConfig(BaseModel):
@@ -134,6 +177,9 @@ class ToolsConfig(BaseModel):
             "run_command",
             "grep",
             "glob",
+            # Multi-agent delegation
+            "subagent",
+            "task",
             "git_status",
             "git_diff",
             "git_log",

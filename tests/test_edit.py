@@ -381,6 +381,37 @@ def world():
         assert '"""Say hello."""' in content
 
     @pytest.mark.asyncio
+    async def test_batched_edits_success(self, edit_tool, test_file):
+        """Should apply multiple edits in one call when edits=[...] is provided"""
+        result = await edit_tool.execute(
+            file_path="test.py",
+            edits=[
+                {"old_string": "def hello():", "new_string": "def greet():"},
+                {"old_string": 'print("world")', "new_string": 'print("earth")'},
+            ],
+        )
+
+        assert result.success
+        content = test_file.read_text()
+        assert "def greet():" in content
+        assert 'print("earth")' in content
+
+    @pytest.mark.asyncio
+    async def test_batched_edits_are_atomic_on_error(self, edit_tool, test_file):
+        """If any batched edit fails, the file should not be partially modified"""
+        original = test_file.read_text()
+        result = await edit_tool.execute(
+            file_path="test.py",
+            edits=[
+                {"old_string": "def hello():", "new_string": "def greet():"},
+                {"old_string": "THIS_WILL_NOT_MATCH", "new_string": "x"},
+            ],
+        )
+
+        assert not result.success
+        assert test_file.read_text() == original
+
+    @pytest.mark.asyncio
     async def test_edit_file_not_found(self, edit_tool, temp_dir):
         """Should return error for non-existent file"""
         result = await edit_tool.execute(

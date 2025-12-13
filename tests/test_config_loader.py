@@ -108,6 +108,16 @@ class TestApplyEnvVars:
 
         assert result["litellm"]["base_url"] == "http://custom.url"
 
+    def test_glm_base_url_override(self, monkeypatch):
+        """Test GLM_BASE_URL env var overrides default for GLM provider"""
+        monkeypatch.setenv("GLM_API_KEY", "test-key")
+        monkeypatch.setenv("GLM_BASE_URL", "http://glm.custom.url")
+
+        config_data = {}
+        result = _apply_env_vars(config_data)
+
+        assert result["litellm"]["base_url"] == "http://glm.custom.url"
+
     def test_model_override(self, monkeypatch, clean_env):
         """Test model override"""
         monkeypatch.setenv("LLC_MODEL", "custom-model")

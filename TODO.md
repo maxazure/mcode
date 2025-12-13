@@ -6,6 +6,81 @@
 
 ## ✅ 已完成
 
+### M12.2 阶段: 批量编辑优化 ✅ 已完成
+- [x] 强化批量编辑提示词 - 完成时间: 2024-12-13 - 负责人: maxazure
+  - 文件: src/maxagent/core/prompts.py
+  - **改进**:
+    - 在 TOOL_USAGE_POLICY 开头添加 "🚨🚨🚨 CRITICAL: ONE EDIT CALL PER FILE" 章节
+    - 强调 "You may only call edit ONCE per file in your ENTIRE response"
+    - 添加 ABSOLUTELY FORBIDDEN 清单和详细 CORRECT/WRONG 示例
+    - 重构 EFFICIENCY RULES 强调 PHASE 1-Read → PHASE 2-Plan → PHASE 3-Execute 工作流
+    - 简化 File Operations 决策树和 Edit Tool Usage 说明
+    - 同步更新 TOOL_USAGE_POLICY_YOLO 提示词
+
+- [x] 优化编辑警告系统 - 完成时间: 2024-12-13 - 负责人: maxazure
+  - 文件: src/maxagent/core/agent.py
+  - **改进**:
+    - 将 `_excessive_edit_threshold` 从 3 改为 2
+    - 强化警告消息，使用 🚨🚨🚨 CRITICAL VIOLATION 格式
+    - 在警告中包含正确的代码示例，指导 LLM 使用 `edits` 数组
+  - **测试验证**:
+    - 单文件多改动: ✅ 使用 `edits: [5 items]` 一次调用完成
+    - 多文件各一个改动: ✅ 每个文件只调用一次 edit
+    - 配置优化任务: ✅ 正确使用批量编辑
+
+### M12.1 阶段: 模型特定配置支持 ✅ 已完成
+- [x] 实现模型特定配置功能 - 完成时间: 2024-12-12 - 负责人: maxazure
+  - **功能**: 允许为每个模型单独配置 max_tokens、context_length 和 temperature
+  - **修改文件**:
+    - src/maxagent/config/schema.py: 添加 ModelSpecificConfig 类和 models 字段
+    - src/maxagent/utils/context.py: 更新 get_model_context_limit() 支持配置优先级
+    - src/maxagent/llm/factory.py: 添加 get_model_max_tokens() 和 get_model_temperature()
+  - **配置格式**:
+    ```yaml
+    model:
+      default: gpt-4o
+      max_tokens: 4096           # 全局默认
+      context_length: 128000     # 全局默认
+      models:                    # 模型特定配置
+        gpt-4o:
+          max_tokens: 8192
+          context_length: 128000
+        deepseek-chat:
+          max_tokens: 4096
+          context_length: 64000
+          temperature: 0.5
+    ```
+  - **配置优先级**: 模型特定配置 > 硬编码默认值 > 全局配置
+  - **测试**: tests/test_model_specific_config.py (19 个测试用例)
+
+- [x] 实现 Provider 特定配置支持 - 完成时间: 2024-12-12 - 负责人: maxazure
+  - **功能**: 同一模型在不同供应商下可能有不同的限制，支持按 provider/model 格式配置
+  - **修改文件**:
+    - src/maxagent/utils/context.py: get_model_context_limit() 添加 provider 参数
+    - src/maxagent/llm/factory.py: get_model_max_tokens/temperature() 添加 provider 参数
+    - src/maxagent/utils/context.py: ContextManager/AsyncContextManager 添加 provider 属性
+  - **配置格式**:
+    ```yaml
+    model:
+      default: gpt-4o
+      max_tokens: 4096
+      context_length: 128000
+      models:
+        # Provider 特定配置 (优先级最高)
+        github_copilot/gpt-4o:
+          max_tokens: 4096
+          context_length: 100000
+        openai/gpt-4o:
+          max_tokens: 16384
+          context_length: 128000
+        # 模型默认配置 (无 provider 时使用)
+        gpt-4o:
+          max_tokens: 8192
+          context_length: 128000
+    ```
+  - **配置优先级**: Provider特定配置 > 模型特定配置 > 硬编码默认值 > 全局配置
+  - **测试**: tests/test_model_specific_config.py (24 个测试用例)
+
 ### M11.7 阶段: Write 工具保留原有代码问题 ✅ 已完成
 - [x] 调查 LLM 使用 write_file 覆盖原有代码问题 - 完成时间: 2024-12-11 - 负责人: maxazure
   - **问题现象**: `llc chat "给 calculator.py 添加功能，让它变成科学计算器"`
@@ -803,7 +878,7 @@ Context Debug [glm-4.6]
 | claude-3.5-sonnet | 200,000 |
 
 ### 智谱 GLM API 集成要点
-- 端点: `https://open.bigmodel.cn/api/paas/v4/chat/completions`
+- 端点: `GLM_BASE_URL` (默认为 https://open.bigmodel.cn/api/coding/paas/v4) — 可通过 .env 配置
 - 使用标准 OpenAI 兼容格式
 - 支持流式输出和函数调用 (tools)
 - 模型列表: glm-4.6, glm-4.6, glm-4.6v 等
@@ -927,7 +1002,7 @@ src/maxagent/
 
 | Provider | 环境变量 | 默认 Base URL | 默认模型 |
 |----------|----------|---------------|----------|
-| GLM (智谱) | `GLM_API_KEY` | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.6` |
+| GLM (智谱) | `GLM_API_KEY` | `GLM_BASE_URL` (默认为 https://open.bigmodel.cn/api/coding/paas/v4) | `glm-4.6` |
 | OpenAI | `OPENAI_API_KEY` | `https://api.openai.com/v1` | `gpt-4` |
 | GitHub Copilot | OAuth 认证 | `https://api.githubcopilot.com` | `gpt-4o` |
 | LiteLLM | `LITELLM_API_KEY` | `http://localhost:4000` | 自定义 |

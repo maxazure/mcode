@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+import os
 from typing import Any, AsyncIterator, Optional
 
 import httpx
@@ -12,10 +13,39 @@ from .models import ChatResponse, Message, StreamDelta
 
 
 @dataclass
+class InitiatorSession:
+    """Tracks X-Initiator header state for a request session.
+
+    Follows GitHub Copilot semantics:
+    - First request in a session: X-Initiator: user
+    - Subsequent requests: X-Initiator: agent
+    """
+
+    is_first_message: bool = True
+    _message_count: int = 0
+
+    def get_initiator(self) -> str:
+        if self.is_first_message:
+            self.is_first_message = False
+            self._message_count = 1
+            return "user"
+        self._message_count += 1
+        return "agent"
+
+    def reset(self) -> None:
+        self.is_first_message = True
+        self._message_count = 0
+
+    @property
+    def message_count(self) -> int:
+        return self._message_count
+
+
+@dataclass
 class LLMConfig:
     """LLM client configuration"""
 
-    base_url: str = "https://open.bigmodel.cn/api/paas/v4"
+    base_url: str = os.getenv("LITELLM_BASE_URL") or os.getenv("GLM_BASE_URL") or "https://open.bigmodel.cn/api/coding/paas/v4"
     api_key: str = ""
     model: str = "glm-4.6"
     temperature: float = 0.7
@@ -28,6 +58,8 @@ class LLMConfig:
     thinking_model: str = "glm-4.6"
     # Whether to parse and extract thinking content
     parse_thinking: bool = True
+    # Allow multiple tool calls per assistant turn (OpenAI-compatible)
+    parallel_tool_calls: bool = True
 
 
 class LLMClient:
@@ -37,6 +69,11 @@ class LLMClient:
         self.config = config
         self._client: Optional[httpx.AsyncClient] = None
         self._chat_endpoint = self._determine_chat_endpoint()
+        self._initiator_session = InitiatorSession()
+
+    def new_session(self) -> None:
+        """Reset X-Initiator tracking for a new conversation/session."""
+        self._initiator_session.reset()
 
     def _determine_chat_endpoint(self) -> str:
         """Determine the chat completions endpoint based on base_url"""
@@ -121,6 +158,7 @@ class LLMClient:
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Build request payload"""
+        parallel_tool_calls = kwargs.pop("parallel_tool_calls", None)
         payload: dict[str, Any] = {
             "model": model or self.config.model,
             "messages": [m.to_dict() for m in messages],
@@ -132,6 +170,9 @@ class LLMClient:
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = kwargs.pop("tool_choice", "auto")
+            if parallel_tool_calls is None:
+                parallel_tool_calls = self.config.parallel_tool_calls
+            payload["parallel_tool_calls"] = parallel_tool_calls
 
         payload.update(kwargs)
         return payload
@@ -139,7 +180,8 @@ class LLMClient:
     async def _send_request(self, payload: dict[str, Any]) -> ChatResponse:
         """Send non-streaming request"""
         client = await self._get_client()
-        response = await client.post(self._chat_endpoint, json=payload)
+        headers = {"X-Initiator": self._initiator_session.get_initiator()}
+        response = await client.post(self._chat_endpoint, json=payload, headers=headers)
         response.raise_for_status()
         data = response.json()
         chat_response = ChatResponse.from_api_response(data)
@@ -176,7 +218,10 @@ class LLMClient:
         """Stream response chunks"""
         client = await self._get_client()
 
-        async with client.stream("POST", self._chat_endpoint, json=payload) as response:
+        headers = {"X-Initiator": self._initiator_session.get_initiator()}
+        async with client.stream(
+            "POST", self._chat_endpoint, json=payload, headers=headers
+        ) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():
                 if not line:

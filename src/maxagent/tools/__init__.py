@@ -127,6 +127,7 @@ def create_registry_with_subagent(
     allow_outside_project: bool = False,
     enable_subagent: bool = True,
     max_subagent_iterations: int = 50,
+    trace_subagents: bool = False,
 ) -> ToolRegistry:
     """Create a tool registry with default tools and SubAgent tools
 
@@ -160,6 +161,7 @@ def create_registry_with_subagent(
                 llm_client=llm_client,
                 tool_registry=None,  # SubAgents get their own registry
                 max_iterations=max_subagent_iterations,
+                trace=trace_subagents,
             )
         )
         registry.register(
@@ -169,6 +171,7 @@ def create_registry_with_subagent(
                 llm_client=llm_client,
                 tool_registry=None,
                 max_iterations=max_subagent_iterations,
+                trace=trace_subagents,
             )
         )
 
@@ -226,6 +229,7 @@ async def create_full_registry(
     load_mcp: bool = True,
     enable_subagent: bool = True,
     max_subagent_iterations: int = 50,
+    trace_subagents: bool = False,
 ) -> ToolRegistry:
     """Create a full tool registry with all tools including MCP and SubAgent
 
@@ -258,6 +262,7 @@ async def create_full_registry(
                 llm_client=llm_client,
                 tool_registry=None,
                 max_iterations=max_subagent_iterations,
+                trace=trace_subagents,
             )
         )
         registry.register(
@@ -267,6 +272,7 @@ async def create_full_registry(
                 llm_client=llm_client,
                 tool_registry=None,
                 max_iterations=max_subagent_iterations,
+                trace=trace_subagents,
             )
         )
 

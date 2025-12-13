@@ -10,6 +10,7 @@ from typing import Optional, TYPE_CHECKING
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Prompt
@@ -17,11 +18,10 @@ from rich.prompt import Prompt
 from maxagent.config import load_config
 from maxagent.core import create_agent, create_thinking_selector
 from maxagent.llm import Message
-from maxagent.tools import ToolResult, create_registry_with_mcp
+from maxagent.tools import ToolResult, create_full_registry
 from maxagent.utils.console import print_dim, print_error, print_info
 from maxagent.utils.thinking import display_thinking, ThinkingResult
 from maxagent.utils.tokens import get_token_tracker, reset_token_tracker
-from maxagent.utils.context import get_context_manager
 
 if TYPE_CHECKING:
     from maxagent.core import Agent
@@ -32,11 +32,123 @@ app = typer.Typer(
 )
 console = Console()
 
+def _truncate_value(value: str, max_len: int = 120) -> str:
+    if len(value) <= max_len:
+        return value
+    return value[: max_len - 3] + "..."
 
-def _tool_callback(name: str, args: str, result: ToolResult) -> None:
-    """Callback to display tool usage"""
-    status = "[green]OK[/green]" if result.success else "[red]FAILED[/red]"
-    console.print(f"[dim]Tool: {name} {status}[/dim]")
+def _one_line(value: object, *, max_len: int = 120) -> str:
+    text = str(value) if value is not None else ""
+    text = " ".join(text.split())
+    return _truncate_value(text, max_len=max_len)
+
+
+def _summarize_tool_args(name: str, args: str) -> str:
+    """Create a compact, human-readable arg summary for common tools."""
+    try:
+        parsed = json.loads(args) if args else {}
+    except Exception:
+        return _truncate_value(args)
+
+    if not isinstance(parsed, dict):
+        return _truncate_value(str(parsed))
+
+    # Tool-specific summaries
+    if name in {"read_file", "write_file"}:
+        path = parsed.get("path") or parsed.get("file_path")
+        if path:
+            return f"path={path}"
+    if name == "edit":
+        fp = parsed.get("file_path") or parsed.get("path")
+        if fp:
+            return f"file_path={fp}"
+    if name == "todowrite":
+        todos = parsed.get("todos", [])
+        if isinstance(todos, list):
+            titles: list[str] = []
+            for t in todos:
+                if isinstance(t, dict):
+                    title = t.get("content") or t.get("id")
+                    if title:
+                        titles.append(str(title))
+            if titles:
+                preview = "; ".join(titles[:3])
+                more = f" (+{len(titles)-3} more)" if len(titles) > 3 else ""
+                return f"todos={len(titles)} [{preview}{more}]"
+
+    # Generic key highlights
+    highlights: list[str] = []
+    for key in ("path", "file_path", "pattern", "command", "query", "url", "name"):
+        if key in parsed:
+            highlights.append(f"{key}={parsed[key]}")
+    if highlights:
+        return ", ".join(highlights)
+
+    return _truncate_value(json.dumps(parsed, ensure_ascii=False))
+
+
+def _make_tool_callback() -> callable:
+    """Factory for verbose tool callback with request grouping."""
+    last_request_id: Optional[int] = None
+
+    def _tool_callback(name: str, args: str, result: ToolResult, request_id: int) -> None:
+        nonlocal last_request_id
+        if request_id != last_request_id:
+            console.print(f"[dim]── Request {request_id} ──[/dim]")
+            last_request_id = request_id
+        status = "[green]OK[/green]" if result.success else "[red]FAILED[/red]"
+
+        if name == "todowrite":
+            try:
+                parsed = json.loads(args) if args else {}
+            except Exception:
+                parsed = {}
+
+            todos = parsed.get("todos") if isinstance(parsed, dict) else None
+            if isinstance(todos, list) and todos:
+                console.print(
+                    f"[dim]Tool(req {request_id}): {name} todos={len(todos)} {status}[/dim]"
+                )
+
+                status_icons = {
+                    "pending": "⏳",
+                    "in_progress": "🔄",
+                    "completed": "✅",
+                    "cancelled": "❌",
+                }
+                max_show = 20
+                for todo in todos[:max_show]:
+                    if not isinstance(todo, dict):
+                        continue
+                    todo_id = _one_line(todo.get("id", ""), max_len=64)
+                    content = _one_line(todo.get("content", ""), max_len=200)
+                    todo_status = _one_line(todo.get("status", "pending"), max_len=32) or "pending"
+                    priority = _one_line(todo.get("priority", ""), max_len=32)
+                    file_path = _one_line(todo.get("file_path", ""), max_len=120)
+
+                    icon = status_icons.get(todo_status, "")
+                    marker = ">>" if todo_status == "in_progress" else "  "
+
+                    line = f"{marker} {icon} {todo_status} [{todo_id}] {content}"
+                    if priority:
+                        line += f" ({priority})"
+                    if file_path:
+                        line += f" -> {file_path}"
+                    console.print(line, style="dim", markup=False)
+
+                if len(todos) > max_show:
+                    console.print(
+                        f"  ... (+{len(todos) - max_show} more)",
+                        style="dim",
+                        markup=False,
+                    )
+                return
+
+        summary = escape(_summarize_tool_args(name, args))
+        summary_part = f" {summary}" if summary else ""
+        console.print(f"[dim]Tool(req {request_id}): {name}{summary_part} {status}[/dim]")
+
+    return _tool_callback
 
 
 def _tool_callback_jsonl(name: str, args: str, result: ToolResult) -> None:
@@ -50,6 +162,35 @@ def _tool_callback_jsonl(name: str, args: str, result: ToolResult) -> None:
         "error": result.error,
     }
     print(json.dumps(output, ensure_ascii=False), flush=True)
+
+
+def _make_request_end_callback() -> callable:
+    """Factory for printing context stats after each LLM request."""
+
+    def _on_request_end(request_id: int, stats: dict, *_: object) -> None:
+        try:
+            current_tokens = stats.get("current_tokens", 0)
+            max_tokens = stats.get("max_tokens", 0)
+            usage_percent = stats.get("usage_percent", 0)
+            messages_count = stats.get("messages_count", 0)
+            remaining = stats.get("remaining_tokens", 0)
+            model = stats.get("model")
+            elapsed_s = stats.get("elapsed_s")
+            elapsed_part = (
+                f", time={elapsed_s:.2f}s" if isinstance(elapsed_s, (int, float)) else ""
+            )
+            console.print(
+                f"[dim]Context(req {request_id}): "
+                f"{current_tokens}/{max_tokens} tokens ({usage_percent:.1f}%), "
+                f"msgs={messages_count}, remaining={remaining}"
+                + (f", model={model}" if model else "")
+                + elapsed_part
+                + "[/dim]"
+            )
+        except Exception:
+            console.print(f"[dim]Context(req {request_id}): {stats}[/dim]")
+
+    return _on_request_end
 
 
 @app.callback(invoke_without_command=True)
@@ -83,6 +224,11 @@ def chat(
     max_iterations: Optional[int] = typer.Option(
         None, "--max-iterations", "-i", help="Maximum tool call iterations (default: from config)"
     ),
+    tool_planner: Optional[bool] = typer.Option(
+        None,
+        "--tool-planner/--no-tool-planner",
+        help="Enable/disable agent-side tool planner to batch independent tool calls",
+    ),
 ) -> None:
     """
     Chat with the AI assistant.
@@ -104,6 +250,11 @@ def chat(
     effective_yolo = yolo or global_opts.get("yolo", False)
     effective_debug_context = debug_context or global_opts.get("debug_context", False)
     effective_max_iterations = max_iterations or global_opts.get("max_iterations")
+    effective_tool_planner = (
+        tool_planner
+        if tool_planner is not None
+        else global_opts.get("tool_planner")
+    )
 
     if message:
         # Single message mode
@@ -119,6 +270,7 @@ def chat(
                 effective_yolo,
                 effective_debug_context,
                 effective_max_iterations,
+                effective_tool_planner,
             )
         )
     else:
@@ -139,6 +291,7 @@ def chat(
                 effective_yolo,
                 effective_debug_context,
                 effective_max_iterations,
+                effective_tool_planner,
             )
         )
 
@@ -154,6 +307,7 @@ async def _single_chat(
     yolo: bool = False,
     debug_context: bool = False,
     max_iterations: Optional[int] = None,
+    tool_planner: Optional[bool] = None,
 ) -> None:
     """Handle single message chat"""
     try:
@@ -185,6 +339,10 @@ async def _single_chat(
 
         config.model.default = effective_model
 
+        # Enable/disable tool planner if overridden from CLI
+        if tool_planner is not None:
+            config.model.enable_tool_planner = tool_planner
+
         # Disable tools if requested
         if no_tools:
             config.tools.enabled = []
@@ -192,15 +350,25 @@ async def _single_chat(
         project_root = project or Path.cwd()
 
         # Choose callback based on mode
-        tool_callback = _tool_callback_jsonl if pipe else _tool_callback
+        tool_callback = _tool_callback_jsonl if pipe else _make_tool_callback()
+        request_end_callback = None if pipe else _make_request_end_callback()
 
         # Show YOLO mode warning
         if yolo and not pipe:
             print_info("[YOLO mode] File access restrictions disabled")
 
-        # Create tool registry with MCP tools
-        tool_registry = await create_registry_with_mcp(
-            project_root, load_mcp=not no_tools, allow_outside_project=yolo
+        # Create shared LLM client and tool registry (native + MCP + SubAgent)
+        from maxagent.llm import create_llm_client
+
+        llm_client = create_llm_client(config)
+        tool_registry = await create_full_registry(
+            project_root,
+            config=config,
+            llm_client=llm_client,
+            allow_outside_project=yolo,
+            load_mcp=not no_tools,
+            enable_subagent=not no_tools,
+            trace_subagents=not pipe,
         )
 
         # Single chat mode: interactive_mode=False (auto-execute, no confirmation)
@@ -208,8 +376,10 @@ async def _single_chat(
         agent = create_agent(
             config=config,
             project_root=project_root,
+            llm_client=llm_client,
             tool_registry=tool_registry,
             on_tool_call=tool_callback,
+            on_request_end=request_end_callback,
             yolo_mode=yolo,
             debug_context=debug_context,
             max_iterations=max_iterations,
@@ -269,6 +439,7 @@ async def _repl_mode(
     yolo: bool = False,
     debug_context: bool = False,
     max_iterations: Optional[int] = None,
+    tool_planner: Optional[bool] = None,
 ) -> None:
     """Interactive REPL mode"""
     console.print("[bold green]MaxAgent Chat Mode[/bold green]")
@@ -311,21 +482,35 @@ async def _repl_mode(
         if model:
             config.model.default = model
 
+        if tool_planner is not None:
+            config.model.enable_tool_planner = tool_planner
+
         if no_tools:
             config.tools.enabled = []
 
         project_root = project or Path.cwd()
 
-        # Create tool registry with MCP tools
-        tool_registry = await create_registry_with_mcp(
-            project_root, load_mcp=not no_tools, allow_outside_project=yolo
+        # Create shared LLM client and tool registry (native + MCP + SubAgent)
+        from maxagent.llm import create_llm_client
+
+        llm_client = create_llm_client(config)
+        tool_registry = await create_full_registry(
+            project_root,
+            config=config,
+            llm_client=llm_client,
+            allow_outside_project=yolo,
+            load_mcp=not no_tools,
+            enable_subagent=not no_tools,
+            trace_subagents=True,
         )
 
         agent = create_agent(
             config=config,
             project_root=project_root,
+            llm_client=llm_client,
             tool_registry=tool_registry,
-            on_tool_call=_tool_callback,
+            on_tool_call=_make_tool_callback(),
+            on_request_end=_make_request_end_callback(),
             yolo_mode=yolo,
             debug_context=debug_context,
             max_iterations=max_iterations,

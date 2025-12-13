@@ -42,23 +42,61 @@ MODEL_CONTEXT_LIMITS = {
 }
 
 
-def get_model_context_limit(model: str) -> int:
+def get_model_context_limit(
+    model: str,
+    config: Optional[Any] = None,
+    provider: Optional[str] = None,
+) -> int:
     """Get the context limit for a model
+
+    Priority:
+    1. Provider-specific config (config.model.models["provider/model"].context_length)
+    2. Model-specific config (config.model.models[model].context_length)
+    3. Hardcoded defaults (MODEL_CONTEXT_LIMITS)
+    4. Global config default (config.model.context_length)
 
     Args:
         model: Model name
+        config: Optional Config object with model-specific settings
+        provider: Optional provider name (e.g., "github_copilot", "openai", "glm")
 
     Returns:
         Context limit in tokens
     """
-    # Direct match
+    # 1. Check provider-specific config (provider/model format)
+    if config is not None and provider:
+        try:
+            provider_model_key = f"{provider}/{model}"
+            model_config = config.model.models.get(provider_model_key)
+            if model_config and model_config.context_length is not None:
+                return model_config.context_length
+        except AttributeError:
+            pass
+
+    # 2. Check model-specific config (model only)
+    if config is not None:
+        try:
+            model_config = config.model.models.get(model)
+            if model_config and model_config.context_length is not None:
+                return model_config.context_length
+        except AttributeError:
+            pass
+
+    # 3. Direct match in hardcoded defaults
     if model in MODEL_CONTEXT_LIMITS:
         return MODEL_CONTEXT_LIMITS[model]
 
-    # Partial match
+    # 4. Partial match in hardcoded defaults
     for key, limit in MODEL_CONTEXT_LIMITS.items():
         if key in model.lower() or model.lower() in key:
             return limit
+
+    # 5. Global config default or hardcoded fallback
+    if config is not None:
+        try:
+            return config.model.context_length
+        except AttributeError:
+            pass
 
     return MODEL_CONTEXT_LIMITS["default"]
 
@@ -243,6 +281,12 @@ class ContextManager:
     # Memory persistence
     project_root: Optional[Path] = None  # Used for memory storage
 
+    # Config reference for model-specific settings
+    config: Optional[Any] = None  # Config object with model-specific settings
+
+    # Provider for provider-specific model configs
+    provider: Optional[str] = None  # e.g., "github_copilot", "openai", "glm"
+
     # Automatic memory injection settings
     enable_memory_injection: bool = True  # Auto inject relevant memories into prompt
     memory_top_k: int = 5  # How many memories to retrieve per turn
@@ -255,7 +299,7 @@ class ContextManager:
 
     def __post_init__(self) -> None:
         """Initialize after dataclass creation"""
-        self._stats.max_tokens = get_model_context_limit(self.model)
+        self._stats.max_tokens = get_model_context_limit(self.model, self.config, self.provider)
 
     def set_model(self, model: str) -> None:
         """Update model and adjust limits
@@ -264,7 +308,25 @@ class ContextManager:
             model: New model name
         """
         self.model = model
-        self._stats.max_tokens = get_model_context_limit(model)
+        self._stats.max_tokens = get_model_context_limit(model, self.config, self.provider)
+
+    def set_provider(self, provider: str) -> None:
+        """Set provider for provider-specific model configs
+
+        Args:
+            provider: Provider name (e.g., "github_copilot", "openai", "glm")
+        """
+        self.provider = provider
+        self._stats.max_tokens = get_model_context_limit(self.model, self.config, provider)
+
+    def set_config(self, config: Any) -> None:
+        """Set config for model-specific settings
+
+        Args:
+            config: Config object with model-specific settings
+        """
+        self.config = config
+        self._stats.max_tokens = get_model_context_limit(self.model, config, self.provider)
 
     def set_project_root(self, project_root: Path) -> None:
         """Set project root for memory persistence."""
@@ -333,7 +395,7 @@ class ContextManager:
             ContextStats with detailed breakdown
         """
         stats = ContextStats(
-            max_tokens=get_model_context_limit(self.model),
+            max_tokens=get_model_context_limit(self.model, self.config, self.provider),
             messages_count=len(messages),
         )
 
@@ -708,6 +770,8 @@ class AsyncContextManager:
         tool_message_trim_tokens: int = 1200,
         tool_trim_keep_last: int = 1,
         max_workers: int = 2,
+        config: Optional[Any] = None,
+        provider: Optional[str] = None,
     ) -> None:
         """Initialize async context manager
 
@@ -717,6 +781,8 @@ class AsyncContextManager:
             retained_ratio: Keep this % of tokens after compression
             min_messages_to_keep: Always keep at least N recent messages
             max_workers: Number of background workers
+            config: Optional Config object with model-specific settings
+            provider: Optional provider name (e.g., "github_copilot", "openai", "glm")
         """
         self.model = model
         self.compression_threshold = compression_threshold
@@ -726,6 +792,8 @@ class AsyncContextManager:
         self.min_reserve_tokens = min_reserve_tokens
         self.tool_message_trim_tokens = tool_message_trim_tokens
         self.tool_trim_keep_last = tool_trim_keep_last
+        self.config = config
+        self.provider = provider
 
         # Background processing
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
@@ -746,6 +814,18 @@ class AsyncContextManager:
         """Update model and invalidate cached stats"""
         with self._lock:
             self.model = model
+            self._stats_valid = False
+
+    def set_config(self, config: Any) -> None:
+        """Set config for model-specific settings"""
+        with self._lock:
+            self.config = config
+            self._stats_valid = False
+
+    def set_provider(self, provider: str) -> None:
+        """Set provider for provider-specific model configs"""
+        with self._lock:
+            self.provider = provider
             self._stats_valid = False
 
     def _reserve_tokens(self, max_tokens: int) -> int:
@@ -831,7 +911,7 @@ class AsyncContextManager:
     def _analyze_messages_sync(self, messages: list["Message"]) -> ContextStats:
         """Synchronous message analysis (runs in thread)"""
         stats = ContextStats(
-            max_tokens=get_model_context_limit(self.model),
+            max_tokens=get_model_context_limit(self.model, self.config, self.provider),
             messages_count=len(messages),
         )
 

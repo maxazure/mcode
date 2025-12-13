@@ -219,12 +219,22 @@ class ListFilesTool(BaseTool):
     """List files matching a glob pattern"""
 
     name = "list_files"
-    description = "List files matching a glob pattern"
+    description = (
+        "List files matching a glob pattern. "
+        "You can pass either `pattern` (preferred) or `path` as a directory to list recursively."
+    )
     parameters = [
         ToolParameter(
             name="pattern",
             type="string",
             description="Glob pattern (e.g., 'src/**/*.py', '*.md')",
+            required=False,
+        ),
+        ToolParameter(
+            name="path",
+            type="string",
+            description="Directory path to list (alias for pattern like 'path/**/*')",
+            required=False,
         ),
         ToolParameter(
             name="max_results",
@@ -250,18 +260,39 @@ class ListFilesTool(BaseTool):
 
     async def execute(
         self,
-        pattern: str,
+        pattern: Optional[str] = None,
+        path: Optional[str] = None,
         max_results: int = 100,
         **kwargs: Any,
     ) -> ToolResult:
         """List files matching pattern"""
         try:
+            effective_pattern = pattern
+            if not effective_pattern:
+                if not path:
+                    return ToolResult(
+                        success=False,
+                        output="",
+                        error="Either 'pattern' or 'path' is required",
+                    )
+                # Treat path as directory (recursive) if it exists, else as raw pattern
+                candidate = self.project_root / path
+                if candidate.exists() and candidate.is_dir():
+                    effective_pattern = str(Path(path) / "**/*")
+                else:
+                    effective_pattern = path
+
             matches: list[str] = []
 
             # If pattern starts with ~ or /, use it as absolute
-            if self.allow_outside_project and (pattern.startswith("~") or pattern.startswith("/")):
-                search_path = Path(os.path.expanduser(pattern)).parent
-                glob_pattern = Path(pattern).name
+            if (
+                self.allow_outside_project
+                and effective_pattern
+                and (effective_pattern.startswith("~") or effective_pattern.startswith("/"))
+            ):
+                expanded = os.path.expanduser(effective_pattern)
+                search_path = Path(expanded).parent
+                glob_pattern = Path(expanded).name
                 if search_path.exists():
                     for path in search_path.glob(glob_pattern):
                         if path.is_file() and self.security_checker.is_safe_path(path):
@@ -269,7 +300,7 @@ class ListFilesTool(BaseTool):
                             if len(matches) >= max_results:
                                 break
             else:
-                for path in self.project_root.glob(pattern):
+                for path in self.project_root.glob(effective_pattern or ""):
                     if path.is_file() and self.security_checker.is_safe_path(path):
                         rel_path = path.relative_to(self.project_root)
                         matches.append(str(rel_path))
@@ -284,7 +315,7 @@ class ListFilesTool(BaseTool):
                 output="\n".join(matches) if matches else "(no files found)",
                 metadata={
                     "count": len(matches),
-                    "pattern": pattern,
+                    "pattern": effective_pattern,
                     "truncated": len(matches) >= max_results,
                 },
             )
@@ -302,10 +333,11 @@ class WriteFileTool(BaseTool):
 
     name = "write_file"
     description = (
-        "Create a NEW file with the given content. "
-        "WARNING: This overwrites the entire file when overwrite=true. "
-        "For existing files, either use the `edit` tool or explicitly set overwrite=true "
-        "(after reading the file) to replace it. Path must be relative to project root by default."
+        "Create a file with the given content. "
+        "By default this refuses to overwrite existing files; set overwrite=true "
+        "(after reading the file) to replace the whole file in one go. "
+        "Prefer overwrite=true for large rewrites, and `edit` for small targeted changes. "
+        "Path must be relative to project root by default."
     )
     parameters = [
         ToolParameter(

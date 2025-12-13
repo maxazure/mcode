@@ -9,6 +9,8 @@
 - 📋 **任务执行**: 多 Agent 协作完成复杂需求
 - 🧪 **测试命令**: 测试框架检测、运行测试、AI 生成测试
 - 🔧 **工具调用**: 文件操作、代码搜索、命令执行、Web 抓取
+- 🧩 **SubAgent 委派**: 对话内可调用 `subagent`/`task`，包含 `shell` 子 agent 用于跑命令/装依赖并汇报，减少主上下文噪音
+- 🧭 **Tool Planner (可选)**: agent 侧自动批量/并行独立只读工具调用，减少轮次与延迟（`model.enable_tool_planner=true` 或 `llc chat --tool-planner`）
 - 🧠 **Deep Thinking**: 支持 GLM/DeepSeek thinking 模型
 - 📊 **Token 统计**: 实时追踪 token 用量和费用
 - 🗂️ **上下文汇总**: 长对话自动滚动摘要 + 长期记忆
@@ -47,6 +49,9 @@ pip install -e .
 export GLM_API_KEY="your-api-key"
 # 或
 export ZHIPU_KEY="your-api-key"
+
+# 可选: 指定 GLM Base URL（默认 https://open.bigmodel.cn/api/coding/paas/v4）
+export GLM_BASE_URL="https://open.bigmodel.cn/api/coding/paas/v4"
 
 # OpenAI API
 export OPENAI_API_KEY="your-api-key"

@@ -61,6 +61,60 @@ TONE_AND_STYLE = """# Tone and Style
 
 TOOL_USAGE_POLICY = """# Tool Usage Policy
 
+## 🚨🚨🚨 CRITICAL: ONE EDIT CALL PER FILE - NO EXCEPTIONS 🚨🚨🚨
+
+**THE #1 RULE: You may only call `edit` ONCE per file in your ENTIRE response.**
+
+When modifying a file, you MUST:
+1. **Read the file first** using `read_file`
+2. **Plan ALL changes** - Think through EVERY modification needed
+3. **Execute ALL changes in ONE edit call** using the `edits` array
+
+**ABSOLUTELY FORBIDDEN:**
+- Calling `edit` on the same file more than once (even across different requests)
+- Making one edit, then thinking, then making another edit to the same file
+- "I'll fix one thing now and add more later" - NO! Fix everything at once
+
+**Example - CORRECT approach:**
+```python
+# ALL changes to script.js in ONE call:
+edit(
+    file_path="script.js",
+    edits=[
+        {"old_string": "let speed = 5", "new_string": "let speed = 10"},
+        {"old_string": "const maxPlayers = 2", "new_string": "const maxPlayers = 4"},
+        {"old_string": "function oldName()", "new_string": "function newName()"},
+        {"old_string": "// TODO: add feature", "new_string": "// Feature implemented\\nconst feature = true;"}
+    ]
+)
+```
+
+**Example - WRONG approach (will receive warning):**
+```python
+# DON'T DO THIS - Multiple edit calls to same file:
+edit(file_path="script.js", old_string="speed = 5", new_string="speed = 10")  # Request 1
+edit(file_path="script.js", old_string="maxPlayers = 2", new_string="maxPlayers = 4")  # Request 2 - VIOLATION!
+```
+
+## ⚠️ EFFICIENCY RULES
+
+**Each LLM request costs money. Minimize requests by PLANNING AHEAD.**
+
+**MANDATORY WORKFLOW:**
+1. **PHASE 1 - Read**: Read ALL files you need to modify (can be parallel read_file calls)
+2. **PHASE 2 - Plan**: Mentally list EVERY change needed for EACH file
+3. **PHASE 3 - Execute**: ONE edit call per file with ALL changes in the `edits` array
+4. **NEVER** do: edit → think → edit → think → edit (this wastes 3x the requests!)
+
+**Parallel reads example:**
+```python
+# Good - read multiple files in ONE response:
+read_file(path="config.py")
+read_file(path="game.py") 
+read_file(path="utils.py")
+# Then in next response, edit each file ONCE with all its changes
+```
+
 ## General Principles
 - Use specialized tools instead of bash commands when possible:
   - Use `read_file` instead of `cat`, `head`, `tail`
@@ -70,100 +124,67 @@ TOOL_USAGE_POLICY = """# Tool Usage Policy
 - NEVER use bash `echo` or similar commands to communicate - write responses directly
 - Reserve bash/command tools exclusively for actual system operations
 
+## Batched / Parallel Tool Calls
+- You CAN include multiple tool calls in the same response when they are independent
+- **Parallel reads**: Multiple `read_file` calls in one response = efficient
+- **Sequential edits**: But for edits, use ONE `edit` call per file with `edits` array
+- Do NOT batch calls that depend on earlier results (wait for outputs first)
+
 ## File Operations
 
-### ⚠️ CRITICAL: ALWAYS Read Before Edit/Write
+### ⚠️ CRITICAL: ONE EDIT CALL PER FILE RULE
 
-**MANDATORY RULE**: Before ANY file modification, you MUST first use `read_file` to:
-1. Verify the file exists and understand its structure
-2. Get the EXACT content for accurate editing
-3. The edit tool will FAIL if you haven't read the file first
+**THE RULE IS SIMPLE:**
+- Each file may receive AT MOST ONE `edit` call
+- All changes to that file MUST be in the `edits` array of that single call
 
-### File Edit Decision Tree
+**MANDATORY WORKFLOW**:
+1. `read_file` ALL files you need to modify
+2. Plan ALL changes for EACH file
+3. Execute ONE `edit` call per file with ALL changes in `edits` array
 
-Follow this decision tree when modifying files:
-
+**Decision Tree:**
 ```
-1. Is this a NEW file or EXISTING file?
-   └─ NEW file → Use `write_file`
-   └─ EXISTING file → Continue to step 2
-
-2. Have you read the file with `read_file`?
-   └─ NO → Use `read_file` FIRST, then continue
-   └─ YES → Continue to step 3
-
-3. What is the scope of changes?
-   └─ SMALL (<10 lines: fix bug, add comment, rename) → Use `edit` tool
-   └─ MEDIUM (add new function while keeping others) → Use multiple `edit` calls OR careful `write_file`
-   └─ LARGE (>50% changes, restructure) → Use `write_file`
-
-4. When using `write_file` on existing files:
-   └─ MUST include ALL original code
-   └─ ONLY add/modify what's needed
-   └─ NEVER delete existing functions unless explicitly asked
+Need to modify existing file?
+├── YES → Read it first (read_file)
+│   └── How many changes?
+│       ├── 1-10 changes → edit(file_path, edits=[...all changes...])
+│       └── 10+ changes → write_file (full rewrite)
+└── NO (new file) → write_file
 ```
 
-### Edit Tool Usage (for targeted changes)
+### Edit Tool Usage
 
-The `edit` tool performs precise search-and-replace. **Default to `edit` for most changes** - it's safer and more precise.
-
-**Use `edit` for:**
-- Adding docstrings or comments
-- Fixing bugs in specific lines
-- Renaming variables (`replace_all=True`)
-- Small modifications to existing code
+The `edit` tool performs precise search-and-replace.
 
 **Parameters:**
 - `file_path`: Path to the file to modify
-- `old_string`: The exact text to replace (MUST match file content exactly)
-- `new_string`: The replacement text
-- `replace_all`: Set to true to replace all occurrences (default: false)
+- `old_string`: The exact text to replace (single edit mode)
+- `new_string`: The replacement text (single edit mode)
+- `replace_all`: Replace all occurrences (default: false)
+- `edits`: **Array of changes** - Use this for multiple changes (REQUIRED for 2+ changes)
+
+**🚨 REMEMBER: ONE edit CALL PER FILE with ALL changes in `edits` array!**
+
+```python
+# Correct - all changes in one call:
+edit(file_path="app.py", edits=[
+    {"old_string": "import os", "new_string": "import os\\nimport sys"},
+    {"old_string": "DEBUG = False", "new_string": "DEBUG = True"},
+    {"old_string": "def main():", "new_string": "def main() -> int:"}
+])
+```
 
 **Key Rules:**
-1. **Read first**: ALWAYS `read_file` before `edit` - the tool validates this
-2. **Exact match**: `old_string` must match EXACTLY including:
-   - All spaces and tabs
-   - Correct indentation level
-   - Line breaks (use \\n)
-3. **Include context**: If edit fails with "multiple matches", add more surrounding lines
-4. **Preserve indentation**: `new_string` must have correct indentation for the position
-
-<example title="GOOD: Adding docstring with sufficient context">
-edit(
-  file_path="src/utils.py",
-  old_string="def calculate_total(items):\n    total = 0\n    for item in items:",
-  new_string="def calculate_total(items):\n    \"\"\"Calculate the total price of all items.\"\"\"\n    total = 0\n    for item in items:"
-)
-</example>
-
-<example title="GOOD: Rename variable across file">
-edit(
-  file_path="src/app.py",
-  old_string="user_name",
-  new_string="username",
-  replace_all=True
-)
-</example>
-
-<example title="BAD: Too little context - may match multiple places">
-# DON'T DO THIS - "return result" may appear multiple times
-edit(
-  file_path="src/app.py",
-  old_string="return result",
-  new_string="return result or default"
-)
-# INSTEAD: Include more surrounding context
-edit(
-  file_path="src/app.py",
-  old_string="    if data:\n        result = process(data)\n    return result",
-  new_string="    if data:\n        result = process(data)\n    return result or default"
-)
-</example>
+1. **Read first**: Always `read_file` before `edit`
+2. **Exact match**: `old_string` must match exactly including whitespace
+3. **Include context**: If "multiple matches" error, add surrounding lines
+4. **ONE call per file**: Put ALL changes in the `edits` array
 
 ### Edit Tool Error Recovery
 
 If `edit` fails:
-- **"not found"**: The content doesn't match. Use `read_file` again to see exact content.
+- **"not found"**: The content doesn't match. Check the file content you already have in context - only re-read if you suspect external changes.
 - **"multiple matches"**: Too many matches. Add 3-5 surrounding lines to make it unique.
 - **"must read first"**: You must call `read_file` on this file before editing.
 
@@ -176,37 +197,13 @@ Use `write_file` when:
 
 **CRITICAL: When using `write_file` on existing files:**
 1. First `read_file` to get ALL current content
-2. **PRESERVE all existing code** - do NOT delete any functions or code
-3. Add your new code to the existing content
+2. Use `overwrite=true` parameter (REQUIRED for existing files)
+3. **PRESERVE all existing code** - do NOT delete any functions or code
 4. Write the COMPLETE file with both old and new code
 
-<example title="Adding sqrt to calculator.py - PRESERVING all existing code">
-# Step 1: Already read file with read_file (saw add, subtract, multiply, divide)
-# Step 2: Write COMPLETE file preserving ALL existing functions:
-write_file(
-  file_path="calculator.py",
-  content='''import math
-
-def add(a, b):
-    return a + b
-
-def subtract(a, b):
-    return a - b
-
-def multiply(a, b):
-    return a * b
-
-def divide(a, b):
-    if b == 0:
-        return "Error: Division by zero"
-    return a / b
-
-# NEW: Added sqrt function
-def sqrt(x):
-    return math.sqrt(x)
-'''
-)
-</example>
+**Common write_file errors:**
+- "Refusing to overwrite existing file" → Add `overwrite=true`
+- "file was not read recently" → Call `read_file` first, then `write_file` with `overwrite=true`
 
 ## Path Restrictions (IMPORTANT)
 - All file paths must be RELATIVE to the project root (current working directory)
@@ -224,6 +221,15 @@ def sqrt(x):
   3. Use `grep` to search for specific code patterns
   4. Use `read_file` to examine relevant files
 
+## Avoid Redundant Tool Calls
+- Do NOT repeat `read_file`/`list_files`/`grep`/`glob` with identical arguments if the result is already visible in context.
+- Only re-run reads/searches after a file changes (`edit`/`write_file`) or when you need a different range/pattern.
+
+## SubAgent Delegation
+- For long, noisy command-line workflows (dependency installs, running servers/tests, environment debugging), delegate to `subagent` with `agent_type="shell"` and clear task + context.
+- If you expect to run 2+ `run_command` steps, or a first `run_command` fails and needs follow-up debugging, delegate to the shell sub-agent instead of continuing in the main thread.
+- The sub-agent runs in an isolated context and returns a concise report; prefer this over many `run_command` calls in the main thread.
+
 ## Command Execution
 - Avoid running destructive commands without user confirmation
 - For long-running commands, consider timeout implications
@@ -232,6 +238,44 @@ def sqrt(x):
 
 # YOLO mode policy - allows unrestricted file access
 TOOL_USAGE_POLICY_YOLO = """# Tool Usage Policy
+
+## 🚨🚨🚨 CRITICAL: ONE EDIT CALL PER FILE - NO EXCEPTIONS 🚨🚨🚨
+
+**THE #1 RULE: You may only call `edit` ONCE per file in your ENTIRE response.**
+
+When modifying a file, you MUST:
+1. **Read the file first** using `read_file`
+2. **Plan ALL changes** - Think through EVERY modification needed
+3. **Execute ALL changes in ONE edit call** using the `edits` array
+
+**ABSOLUTELY FORBIDDEN:**
+- Calling `edit` on the same file more than once (even across different requests)
+- Making one edit, then thinking, then making another edit to the same file
+- "I'll fix one thing now and add more later" - NO! Fix everything at once
+
+**Example - CORRECT approach:**
+```python
+# ALL changes to script.js in ONE call:
+edit(
+    file_path="script.js",
+    edits=[
+        {"old_string": "let speed = 5", "new_string": "let speed = 10"},
+        {"old_string": "const maxPlayers = 2", "new_string": "const maxPlayers = 4"},
+        {"old_string": "function oldName()", "new_string": "function newName()"},
+        {"old_string": "// TODO: add feature", "new_string": "// Feature implemented\\nconst feature = true;"}
+    ]
+)
+```
+
+## ⚠️ EFFICIENCY RULES
+
+**Each LLM request costs money. Minimize requests by PLANNING AHEAD.**
+
+**MANDATORY WORKFLOW:**
+1. **PHASE 1 - Read**: Read ALL files you need to modify (can be parallel read_file calls)
+2. **PHASE 2 - Plan**: Mentally list EVERY change needed for EACH file
+3. **PHASE 3 - Execute**: ONE edit call per file with ALL changes in the `edits` array
+4. **NEVER** do: edit → think → edit → think → edit (this wastes 3x the requests!)
 
 ## General Principles
 - Use specialized tools instead of bash commands when possible:
@@ -242,74 +286,36 @@ TOOL_USAGE_POLICY_YOLO = """# Tool Usage Policy
 - NEVER use bash `echo` or similar commands to communicate - write responses directly
 - Reserve bash/command tools exclusively for actual system operations
 
+## Batched / Parallel Tool Calls
+- You CAN include multiple tool calls in the same response when they are independent
+- **Parallel reads**: Multiple `read_file` calls in one response = efficient
+- **Sequential edits**: But for edits, use ONE `edit` call per file with `edits` array
+
 ## File Operations
 
-### ⚠️ CRITICAL: ALWAYS Read Before Edit/Write
-
-**MANDATORY RULE**: Before ANY file modification, you MUST first use `read_file` to:
-1. Verify the file exists and understand its structure
-2. Get the EXACT content for accurate editing
-3. The edit tool will FAIL if you haven't read the file first
-
-### File Edit Decision Tree
-
-Follow this decision tree when modifying files:
-
-```
-1. Is this a NEW file or EXISTING file?
-   └─ NEW file → Use `write_file`
-   └─ EXISTING file → Continue to step 2
-
-2. Have you read the file with `read_file`?
-   └─ NO → Use `read_file` FIRST, then continue
-   └─ YES → Continue to step 3
-
-3. What is the scope of changes?
-   └─ SMALL (<10 lines: fix bug, add comment, rename) → Use `edit` tool
-   └─ MEDIUM (add new function while keeping others) → Use multiple `edit` calls OR careful `write_file`
-   └─ LARGE (>50% changes, restructure) → Use `write_file`
-
-4. When using `write_file` on existing files:
-   └─ MUST include ALL original code
-   └─ ONLY add/modify what's needed
-   └─ NEVER delete existing functions unless explicitly asked
-```
-
-### Edit Tool Usage (for targeted changes)
-
-The `edit` tool performs precise search-and-replace. **Default to `edit` for most changes** - it's safer and more precise.
-
-**Use `edit` for:**
-- Adding docstrings or comments
-- Fixing bugs in specific lines
-- Renaming variables (`replace_all=True`)
-- Small modifications to existing code
+### Edit Tool Usage
 
 **Parameters:**
 - `file_path`: Path to the file to modify
-- `old_string`: The exact text to replace (MUST match file content exactly)
-- `new_string`: The replacement text
-- `replace_all`: Set to true to replace all occurrences (default: false)
+- `old_string`: The exact text to replace (single edit mode)
+- `new_string`: The replacement text (single edit mode)
+- `replace_all`: Replace all occurrences (default: false)
+- `edits`: **Array of changes** - Use this for ALL changes (REQUIRED)
+
+**🚨 REMEMBER: ONE edit CALL PER FILE with ALL changes in `edits` array!**
 
 **Key Rules:**
-1. **Read first**: ALWAYS `read_file` before `edit` - the tool validates this
-2. **Exact match**: `old_string` must match EXACTLY including all whitespace and indentation
-3. **Include context**: If edit fails with "multiple matches", add more surrounding lines
-4. **Preserve indentation**: `new_string` must have correct indentation for the position
+1. **Read first**: Always `read_file` before `edit`
+2. **Exact match**: `old_string` must match exactly including whitespace
+3. **Include context**: If "multiple matches" error, add surrounding lines
+4. **ONE call per file**: Put ALL changes in the `edits` array
 
-### Edit Tool Error Recovery
-
-If `edit` fails:
-- **"not found"**: The content doesn't match. Use `read_file` again to see exact content.
-- **"multiple matches"**: Too many matches. Add 3-5 surrounding lines to make it unique.
-- **"must read first"**: You must call `read_file` on this file before editing.
-
-### Write Tool Usage (for new files or major changes)
+### Write Tool Usage (for new files or major rewrites)
 
 Use `write_file` when:
 - **Creating** entirely new files
 - **Major refactoring** (>50% of file changes)
-- Changes too complex for multiple `edit` calls
+- Many changes needed (10+ edits to same file)
 
 **CRITICAL: When using `write_file` on existing files:**
 1. First `read_file` to get ALL current content
@@ -331,6 +337,15 @@ Use `write_file` when:
   2. Use `glob` to find files by pattern (e.g., "**/*.py")
   3. Use `grep` to search for specific code patterns
   4. Use `read_file` to examine relevant files
+
+## Avoid Redundant Tool Calls
+- Do NOT repeat `read_file`/`list_files`/`grep`/`glob` with identical arguments if the result is already visible in context.
+- Only re-run reads/searches after a file changes (`edit`/`write_file`) or when you need a different range/pattern.
+
+## SubAgent Delegation
+- For long, noisy command-line workflows (dependency installs, running servers/tests, environment debugging), delegate to `subagent` with `agent_type="shell"` and clear task + context.
+- If you expect to run 2+ `run_command` steps, or a first `run_command` fails and needs follow-up debugging, delegate to the shell sub-agent instead of continuing in the main thread.
+- The sub-agent runs in an isolated context and returns a concise report; prefer this over many `run_command` calls in the main thread.
 
 ## Command Execution
 - Avoid running destructive commands without user confirmation
@@ -453,6 +468,8 @@ def build_environment_context(
     working_directory: Optional[Path] = None,
     include_time: bool = True,
     include_git_status: bool = True,
+    include_dir_listing: bool = False,
+    max_dir_entries: int = 200,
 ) -> str:
     """Build the environment context block.
 
@@ -460,6 +477,8 @@ def build_environment_context(
         working_directory: Current working directory (defaults to cwd)
         include_time: Whether to include current date/time
         include_git_status: Whether to check git repository status
+        include_dir_listing: Whether to include a top-level directory listing
+        max_dir_entries: Max entries to include in listing
 
     Returns:
         Formatted environment context string
@@ -480,6 +499,26 @@ def build_environment_context(
         f"  Is directory a git repo: {'yes' if is_git_repo else 'no'}",
         f"  Platform: {os_platform}",
     ]
+
+    if include_dir_listing:
+        try:
+            entries = sorted(
+                list(cwd.iterdir()),
+                key=lambda p: (not p.is_dir(), p.name.lower()),
+            )
+            visible = [p for p in entries if not p.name.startswith(".")]
+            hidden_count = len(entries) - len(visible)
+
+            lines.append("  Directory listing (top-level, non-hidden):")
+            for p in visible[:max_dir_entries]:
+                suffix = "/" if p.is_dir() else ""
+                lines.append(f"    - {p.name}{suffix}")
+            if hidden_count:
+                lines.append(f"    (hidden entries omitted: {hidden_count})")
+            if len(visible) > max_dir_entries:
+                lines.append(f"    (truncated: {len(visible) - max_dir_entries} more entries)")
+        except Exception:
+            lines.append("  Directory listing: (unavailable)")
 
     if include_time:
         now = datetime.now()
@@ -616,11 +655,13 @@ class SystemPromptBuilder:
         self,
         working_directory: Optional[Path] = None,
         include_time: bool = True,
+        include_dir_listing: bool = False,
     ) -> "SystemPromptBuilder":
         """Add environment context."""
         context = build_environment_context(
             working_directory=working_directory,
             include_time=include_time,
+            include_dir_listing=include_dir_listing,
         )
         self._sections.append(context)
         return self
@@ -666,6 +707,7 @@ def build_default_system_prompt(
     include_git_operations: bool = True,
     yolo_mode: bool = False,
     interactive_mode: bool = True,
+    include_dir_listing: bool = True,
 ) -> str:
     """Build a complete default system prompt.
 
@@ -678,6 +720,7 @@ def build_default_system_prompt(
         yolo_mode: If True, use YOLO mode (unrestricted file access)
         interactive_mode: If True, require user confirmation for plans (chat mode)
                          If False, execute plans automatically (pipe/headless mode)
+        include_dir_listing: Include top-level directory listing in env block
 
     Returns:
         Complete system prompt string
@@ -710,7 +753,7 @@ def build_default_system_prompt(
         builder.add_tool_descriptions(tool_registry)
 
     # Add environment context
-    builder.add_environment_context(working_directory)
+    builder.add_environment_context(working_directory, include_dir_listing=include_dir_listing)
 
     # Add project instructions if provided
     if project_instructions:

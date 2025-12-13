@@ -608,7 +608,8 @@ class EditTool(BaseTool):
 Usage:
 - You must use the `read_file` tool first before editing. This tool will error if you attempt an edit without reading the file.
 - When editing text, ensure you preserve the exact indentation (tabs/spaces) as it appears in the file.
-- ALWAYS prefer editing existing files over writing new files.
+- Prefer `edit` for small, targeted changes. For large rewrites, use `write_file` with `overwrite=true` (after reading the file) to replace the whole file in one go.
+- If a single file needs multiple separate changes, prefer one `edit` call with `edits=[...]` (batched edits) to reduce retries and context bloat.
 - The edit will FAIL if `oldString` is not found in the file.
 - The edit will FAIL if `oldString` is found multiple times. Either provide more surrounding context to make it unique, or use `replaceAll=true`.
 - Use `replaceAll` for replacing and renaming strings across the file (e.g., renaming a variable).
@@ -628,11 +629,13 @@ Common Errors:
             name="old_string",
             type="string",
             description="The exact text to replace (must match exactly, including whitespace)",
+            required=False,
         ),
         ToolParameter(
             name="new_string",
             type="string",
             description="The text to replace it with (must be different from old_string)",
+            required=False,
         ),
         ToolParameter(
             name="replace_all",
@@ -640,6 +643,34 @@ Common Errors:
             description="Replace all occurrences of old_string (default: false)",
             required=False,
             default=False,
+        ),
+        ToolParameter(
+            name="edits",
+            type="array",
+            description=(
+                "Optional batched edits for the same file. If provided, old_string/new_string are ignored and "
+                "each edit is applied sequentially in order (all-or-nothing)."
+            ),
+            required=False,
+            items={
+                "type": "object",
+                "properties": {
+                    "old_string": {
+                        "type": "string",
+                        "description": "Exact text to replace (must match exactly, including whitespace)",
+                    },
+                    "new_string": {
+                        "type": "string",
+                        "description": "Replacement text (must be different from old_string)",
+                    },
+                    "replace_all": {
+                        "type": "boolean",
+                        "description": "Replace all occurrences for this edit (default: false)",
+                        "default": False,
+                    },
+                },
+                "required": ["old_string", "new_string"],
+            },
         ),
     ]
     risk_level = "high"
@@ -718,9 +749,10 @@ Common Errors:
     async def execute(
         self,
         file_path: str,
-        old_string: str,
-        new_string: str,
+        old_string: Optional[str] = None,
+        new_string: Optional[str] = None,
         replace_all: bool = False,
+        edits: Optional[list[dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> ToolResult:
         """Execute the edit operation"""
@@ -729,22 +761,38 @@ Common Errors:
             if not file_path:
                 return ToolResult(success=False, output="", error="file_path is required")
 
-            if old_string == new_string:
-                return ToolResult(
-                    success=False,
-                    output="",
-                    error="old_string and new_string must be different",
-                )
+            # Validate edit mode: either single edit (old_string/new_string) or batched edits
+            is_batched = edits is not None
+            if is_batched:
+                if not isinstance(edits, list) or not edits:
+                    return ToolResult(
+                        success=False,
+                        output="",
+                        error="edits must be a non-empty list",
+                    )
+            else:
+                if old_string is None or new_string is None:
+                    return ToolResult(
+                        success=False,
+                        output="",
+                        error="old_string and new_string are required unless edits is provided",
+                    )
+                if old_string == new_string:
+                    return ToolResult(
+                        success=False,
+                        output="",
+                        error="old_string and new_string must be different",
+                    )
 
-            if not old_string.strip():
-                return ToolResult(
-                    success=False,
-                    output="",
-                    error=(
-                        "old_string cannot be empty. "
-                        "Provide the exact text to replace (with context) or use a more targeted snippet."
-                    ),
-                )
+                if not old_string.strip():
+                    return ToolResult(
+                        success=False,
+                        output="",
+                        error=(
+                            "old_string cannot be empty. "
+                            "Provide the exact text to replace (with context) or use a more targeted snippet."
+                        ),
+                    )
 
             # Check for path restrictions
             if not self.allow_outside_project:
@@ -790,24 +838,79 @@ Common Errors:
                     error=f"Cannot read file as text: {file_path}",
                 )
 
-            # Prevent accidental full-file replacement
-            if old_string == old_content or old_string.strip() == old_content.strip():
-                return ToolResult(
-                    success=False,
-                    output="",
-                    error=(
-                        "Refusing full-file replacement. "
-                        "Provide a smaller old_string snippet or break the change into smaller edits."
-                    ),
-                )
+            indent_warnings: list[str] = []
 
-            # Validate indentation
-            indent_warnings = validate_indentation(old_string, new_string)
-            
-            # Handle empty old_string (create new file content)
-            if old_string == "":
-                new_content = new_string
+            if is_batched:
+                # Apply all edits sequentially in memory; write only once at the end.
+                new_content = old_content
+                for idx, edit in enumerate(edits or [], start=1):
+                    if not isinstance(edit, dict):
+                        return ToolResult(
+                            success=False,
+                            output="",
+                            error=f"edits[{idx}] must be an object",
+                        )
+
+                    e_old = edit.get("old_string")
+                    e_new = edit.get("new_string")
+                    e_replace_all = bool(edit.get("replace_all", replace_all))
+
+                    if not isinstance(e_old, str) or not isinstance(e_new, str):
+                        return ToolResult(
+                            success=False,
+                            output="",
+                            error=f"edits[{idx}] must include old_string/new_string strings",
+                        )
+                    if e_old == e_new:
+                        return ToolResult(
+                            success=False,
+                            output="",
+                            error=f"edits[{idx}]: old_string and new_string must be different",
+                        )
+                    if not e_old.strip():
+                        return ToolResult(
+                            success=False,
+                            output="",
+                            error=f"edits[{idx}]: old_string cannot be empty",
+                        )
+
+                    # Prevent accidental full-file replacement
+                    if e_old == new_content or e_old.strip() == new_content.strip():
+                        return ToolResult(
+                            success=False,
+                            output="",
+                            error=(
+                                "Refusing full-file replacement. "
+                                "Provide a smaller old_string snippet or use write_file(overwrite=true)."
+                            ),
+                        )
+
+                    indent_warnings.extend(validate_indentation(e_old, e_new))
+
+                    try:
+                        new_content = replace_content(new_content, e_old, e_new, e_replace_all)
+                    except EditError as e:
+                        error_msg = f"edits[{idx}]: {e}"
+                        if e.suggestion:
+                            error_msg += f"\n\n{e.suggestion}"
+                        return ToolResult(success=False, output="", error=error_msg)
             else:
+                assert old_string is not None and new_string is not None
+
+                # Prevent accidental full-file replacement
+                if old_string == old_content or old_string.strip() == old_content.strip():
+                    return ToolResult(
+                        success=False,
+                        output="",
+                        error=(
+                            "Refusing full-file replacement. "
+                            "Provide a smaller old_string snippet or break the change into smaller edits."
+                        ),
+                    )
+
+                # Validate indentation
+                indent_warnings = validate_indentation(old_string, new_string)
+
                 # Perform replacement
                 try:
                     new_content = replace_content(old_content, old_string, new_string, replace_all)

@@ -84,7 +84,9 @@ def _apply_env_vars(config_data: dict[str, Any]) -> dict[str, Any]:
             config_data.setdefault("litellm", {})["provider"] = "glm"
             # Set default base URL for GLM if not already set
             if "base_url" not in config_data.get("litellm", {}):
-                config_data["litellm"]["base_url"] = "https://open.bigmodel.cn/api/paas/v4"
+                # Allow explicit GLM base URL override via environment variable
+                glm_base = os.getenv("GLM_BASE_URL")
+                config_data["litellm"]["base_url"] = glm_base or "https://open.bigmodel.cn/api/coding/paas/v4"
             # Set default model for GLM if not already set
             if "default" not in config_data.get("model", {}):
                 config_data.setdefault("model", {})["default"] = "glm-4.6"
@@ -111,7 +113,7 @@ def _apply_env_vars(config_data: dict[str, Any]) -> dict[str, Any]:
                 config_data.setdefault("model", {})["default"] = "gpt-4o"
 
     # Explicit base URL override (highest priority)
-    if base_url := os.getenv("LITELLM_BASE_URL") or os.getenv("OPENAI_BASE_URL"):
+    if base_url := os.getenv("LITELLM_BASE_URL") or os.getenv("OPENAI_BASE_URL") or os.getenv("GLM_BASE_URL"):
         config_data.setdefault("litellm", {})["base_url"] = base_url
 
     # LLC_MODEL or MAXAGENT_MODEL (explicit model override)
@@ -249,9 +251,10 @@ def init_user_config() -> Path:
 # API Configuration
 # Supported providers: litellm, openai, glm, custom
 litellm:
-  provider: "glm"  # or "openai", "litellm", "custom"
-  base_url: "https://open.bigmodel.cn/api/paas/v4"
-  api_key: ""  # Or set GLM_API_KEY / OPENAI_API_KEY environment variable
+    provider: "glm"  # or "openai", "litellm", "custom"
+    # Use environment variable GLM_BASE_URL or LITELLM_BASE_URL to override
+    base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
+    api_key: ""  # Or set GLM_API_KEY / OPENAI_API_KEY environment variable
 
 # Model Configuration
 model:
