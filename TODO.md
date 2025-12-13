@@ -6,6 +6,21 @@
 
 ## ✅ 已完成
 
+### M12.4 阶段: 测试指南增强 ✅ 已完成
+- [x] 添加测试指南到提示词系统 - 完成时间: 2024-12-13 - 负责人: maxazure
+  - 文件: src/maxagent/core/prompts.py
+  - **新增 TESTING_GUIDELINES** (~170 行):
+    - 指导 LLM 如何发现项目测试配置 (pytest.ini, pyproject.toml)
+    - 强调使用 `.venv/bin/python -m pytest` 而非 `python -m pytest`
+    - 提供 `timeout=120` 参数建议 (默认 30s 太短)
+    - 包含测试驱动开发工作流示例
+    - 测试文件命名规范和结构模板
+
+- [x] 增加命令输出限制 - 完成时间: 2024-12-13 - 负责人: maxazure
+  - 文件: src/maxagent/tools/command.py
+  - **修改**: `max_output` 默认值 10000 → 50000
+  - **原因**: pytest verbose 输出通常需要 ~40KB
+
 ### M12.3 阶段: 并行编辑多文件优化 ✅ 已完成
 - [x] 优化多文件编辑的请求效率 - 完成时间: 2024-12-13 - 负责人: maxazure
   - 文件: src/maxagent/core/prompts.py
