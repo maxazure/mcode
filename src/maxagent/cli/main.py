@@ -14,7 +14,7 @@ app = typer.Typer(
 )
 
 # Import and register subcommands
-from maxagent.cli import chat, edit, config_cmd, task, test_cmd, auth_cmd, mcp_cmd
+from maxagent.cli import chat, edit, config_cmd, task, test_cmd, auth_cmd, mcp_cmd, models_cmd
 
 app.add_typer(chat.app, name="chat")
 app.add_typer(edit.app, name="edit")
@@ -23,6 +23,7 @@ app.add_typer(task.app, name="task")
 app.add_typer(test_cmd.app, name="test")
 app.add_typer(auth_cmd.app, name="auth")
 app.add_typer(mcp_cmd.app, name="mcp")
+app.add_typer(models_cmd.app, name="models")
 
 
 @app.callback()

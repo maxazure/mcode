@@ -6,6 +6,16 @@
 
 ## ✅ 最近完成
 
+### mcode models 命令 ✅ 已完成
+- [x] 添加 `mcode models` 命令列出可用模型 - 完成时间: 2024-12-14
+  - **新文件**: `src/maxagent/cli/models_cmd.py`
+  - **功能**: 
+    - `mcode models list` - 列出 GitHub Copilot 可用模型 (37 个)
+    - `mcode models list -v` - 详细模式显示 Family、Preview 等信息
+    - `mcode models list -p all` - 列出 config.yaml 中配置的模型
+  - **API**: 调用 `https://api.githubcopilot.com/models` 获取模型列表
+  - **认证**: 使用已有的 Copilot OAuth token
+
 ### CLI 重命名: llc → mcode ✅ 已完成
 - [x] 重命名 CLI 命令和配置 - 完成时间: 2024-12-14
   - **CLI 命令**: `llc` → `mcode`
@@ -109,13 +119,14 @@ src/maxagent/
 ```
 
 ### 最近完成的重要功能
-1. **CLI 重命名**: `llc` → `mcode`，配置目录 `~/.llc/` → `~/.mcode/`
-2. **模型自动选择**: `--model` 参数自动选择正确的 provider
-3. **多 Agent 协作**: 修复了 subagent 调用失败问题
-4. **配置目录统一**: 从 `~/.config/maxagent/` 迁移到 `~/.mcode/`
-5. **MCP 集成**: 完整的 Model Context Protocol 支持
-6. **Thinking 系统**: 智能思考策略和深度思考功能
-7. **测试框架**: 智能测试检测和生成功能
+1. **mcode models 命令**: 列出 GitHub Copilot 可用模型
+2. **CLI 重命名**: `llc` → `mcode`，配置目录 `~/.llc/` → `~/.mcode/`
+3. **模型自动选择**: `--model` 参数自动选择正确的 provider
+4. **多 Agent 协作**: 修复了 subagent 调用失败问题
+5. **配置目录统一**: 从 `~/.config/maxagent/` 迁移到 `~/.mcode/`
+6. **MCP 集成**: 完整的 Model Context Protocol 支持
+7. **Thinking 系统**: 智能思考策略和深度思考功能
+8. **测试框架**: 智能测试检测和生成功能
 
 ---
 
