@@ -54,6 +54,7 @@ coverage.xml
 # Environments
 .env
 .env.*
+!.env.example
 .venv
 env/
 venv/
@@ -80,9 +81,17 @@ dmypy.json
 .DS_Store
 Thumbs.db
 
-# Project specific
+# Project specific - Security
 *.pem
 *.key
 *.p12
 secrets/
 credentials/
+token.json
+
+# Claude/Copilot specific config (contains personal instructions)
+.claude/
+
+# Internal docs (not for public)
+产品需求.md
+TODO-history.md

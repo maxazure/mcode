@@ -1,0 +1,111 @@
+# MaxAgent Configuration
+# Location: ~/.mcode/config.yaml
+# Priority: Project config (.mcode.yaml) > Global config > Defaults
+
+# ===== API Provider =====
+litellm:
+  # Provider options: glm, openai, github_copilot, litellm, custom
+  provider: "github_copilot"
+  # base_url and api_key should be set via environment variables:
+  # - GLM_API_KEY / ZHIPU_KEY
+  # - OPENAI_API_KEY
+  # - GLM_BASE_URL / LITELLM_BASE_URL
+
+# ===== Model Configuration =====
+model:
+  # Default model to use
+  default: "gpt-4.1"
+  
+  # Thinking model for deep reasoning tasks
+  thinking_model: "gpt-4.1"
+  
+  # Thinking strategy: auto, enabled, disabled
+  thinking_strategy: "auto"
+  
+  # Show thinking process in output
+  show_thinking: true
+  
+  # Generation parameters
+  temperature: 0.7
+  max_tokens: 64000
+  context_length: 128000
+  
+  # Maximum tool call iterations per request
+  max_iterations: 200
+  
+  # Allow multiple tool calls per assistant turn
+  parallel_tool_calls: true
+
+  # Model-specific configurations
+  # Format: provider/model_name
+  models:
+    # ===== GitHub Copilot Models =====
+    github_copilot/gpt-4.1:
+      max_tokens: 64000
+      context_length: 111000
+    github_copilot/gpt-5-mini:
+      max_tokens: 64000
+      context_length: 128000
+    github_copilot/claude-sonnet-4.5:
+      max_tokens: 64000
+      context_length: 200000
+
+    # ===== GLM Models =====
+    glm/glm-4.6:
+      max_tokens: 128000
+      context_length: 200000
+
+# ===== Tool Configuration =====
+tools:
+  enabled:
+    - read_file
+    - list_files
+    - search_code
+    - write_file
+    - edit
+    - run_command
+    - grep
+    - glob
+    - subagent
+    - task
+    - git_status
+    - git_diff
+    - git_log
+    - git_branch
+    - webfetch
+    - search_memory
+    - todowrite
+    - todoread
+    - todoclear
+  disabled: []
+
+# ===== Security Configuration =====
+security:
+  # File patterns to ignore (never read/write)
+  ignore_patterns:
+    - ".env"
+    - ".env.*"
+    - "*.pem"
+    - "*.key"
+    - "*.p12"
+    - "**/secrets/**"
+
+# ===== Instructions Configuration =====
+instructions:
+  # Project instruction file name
+  filename: "MAXAGENT.md"
+  
+  # Alternative names to search for
+  alternative_names:
+    - "AGENTS.md"
+    - "CLAUDE.md"
+    - ".maxagent.md"
+  
+  # Global instruction file
+  global_file: "~/.mcode/MAXAGENT.md"
+  
+  # Additional instruction files to load
+  additional_files: []
+  
+  # Auto-discover instruction files in project
+  auto_discover: true

@@ -241,84 +241,142 @@ def save_config(config: Config, path: Path) -> None:
         yaml.safe_dump(data, f, default_flow_style=False, allow_unicode=True)
 
 
-def init_user_config() -> Path:
-    """Initialize user configuration file with defaults"""
-    config_path = get_user_config_path()
+def init_user_config(force: bool = False) -> Path:
+    """Initialize user configuration directory and files.
 
-    if config_path.exists():
+    Creates ~/.mcode/ directory with:
+    - config.yaml: Main configuration file
+    - MAXAGENT.md: Global instruction file (optional)
+
+    Args:
+        force: If True, overwrite existing config file
+
+    Returns:
+        Path to config file
+    """
+    config_dir = Path.home() / USER_CONFIG_DIR
+    config_path = config_dir / USER_CONFIG_FILE
+
+    # Create directory if it doesn't exist
+    config_dir.mkdir(parents=True, exist_ok=True)
+
+    if config_path.exists() and not force:
         return config_path
 
     # Create default config
     default_config = """# MaxAgent Configuration
-# See documentation for all available options
+# Location: ~/.mcode/config.yaml
+# Documentation: https://github.com/maxazure/maxagent
 
-# API Configuration
-# Supported providers: litellm, openai, glm, custom
+# ===== API Provider =====
 litellm:
-    provider: "glm"  # or "openai", "litellm", "custom"
-    # Use environment variable GLM_BASE_URL or LITELLM_BASE_URL to override
-    base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
-    api_key: ""  # Or set GLM_API_KEY / OPENAI_API_KEY environment variable
+  # Provider options: glm, openai, github_copilot, litellm, custom
+  # GitHub Copilot is recommended - run `mcode auth copilot` to authenticate
+  provider: "github_copilot"
+  
+  # For GLM/OpenAI, set API key via environment variable:
+  # - GLM_API_KEY or ZHIPU_KEY for GLM
+  # - OPENAI_API_KEY for OpenAI
+  # api_key: ""
+  # base_url: ""
 
-# Model Configuration
+# ===== Model Configuration =====
 model:
-  default: "glm-4.6"  # Default model to use
-  thinking_model: "glm-4.6"  # Thinking 也固定使用 glm-4.6
-  thinking_strategy: "auto"  # auto, enabled, disabled - auto decides based on question complexity
-  show_thinking: true  # Show thinking process in output
+  # Default model (auto-selects provider based on models config below)
+  default: "gpt-4.1"
+  
+  # Thinking model for complex reasoning
+  thinking_model: "gpt-4.1"
+  thinking_strategy: "auto"  # auto, enabled, disabled
+  show_thinking: true
+  
+  # Generation parameters
   temperature: 0.7
-  max_tokens: 4096
+  max_tokens: 64000
+  context_length: 128000
+  max_iterations: 200
+  parallel_tool_calls: true
 
-# Tools Configuration
+  # Model-specific configurations (provider/model format)
+  models:
+    github_copilot/gpt-4.1:
+      max_tokens: 64000
+      context_length: 111000
+    github_copilot/gpt-5-mini:
+      max_tokens: 64000
+      context_length: 128000
+    github_copilot/claude-sonnet-4.5:
+      max_tokens: 64000
+      context_length: 200000
+    glm/glm-4.6:
+      max_tokens: 128000
+      context_length: 200000
+
+# ===== Tools =====
 tools:
   enabled:
     - read_file
     - list_files
     - search_code
     - write_file
+    - edit
     - run_command
     - grep
     - glob
-    - find_files
+    - subagent
+    - task
     - git_status
     - git_diff
     - git_log
     - git_branch
     - webfetch
+    - todowrite
+    - todoread
+    - todoclear
   disabled: []
 
-# Security Configuration
+# ===== Security =====
 security:
   ignore_patterns:
     - ".env"
     - ".env.*"
     - "*.pem"
     - "*.key"
-  require_confirmation:
-    - write_file
-    - run_command
+    - "*.p12"
+    - "**/secrets/**"
 
-# Instructions Configuration (like AGENTS.md or CLAUDE.md)
+# ===== Instructions =====
 instructions:
-  filename: "MAXAGENT.md"  # Primary instruction file name
+  filename: "MAXAGENT.md"
   alternative_names:
     - "AGENTS.md"
     - "CLAUDE.md"
     - ".maxagent.md"
-  global_file: "~/.llc/MAXAGENT.md"  # Global instruction file
-  additional_files: []  # Additional instruction files (supports glob)
-  auto_discover: true  # Auto-discover instruction files in parent directories
-
-# Environment Variables:
-# - GLM_API_KEY: Zhipu GLM API key (auto-configures provider)
-# - OPENAI_API_KEY: OpenAI API key (auto-configures provider)
-# - LITELLM_API_KEY: LiteLLM proxy API key
-# - LITELLM_BASE_URL: Override API base URL
-# - MCODE_MODEL: Override default model
-# - MCODE_TEMPERATURE: Override temperature
+  global_file: "~/.mcode/MAXAGENT.md"
+  additional_files: []
+  auto_discover: true
 """
 
-    config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(default_config, encoding="utf-8")
 
+    # Create empty global instruction file if it doesn't exist
+    global_instructions = config_dir / "MAXAGENT.md"
+    if not global_instructions.exists():
+        global_instructions.write_text(
+            "# Global Instructions\n\n"
+            "Add your global instructions here. These will be included in all mcode sessions.\n",
+            encoding="utf-8",
+        )
+
     return config_path
+
+
+def ensure_config_dir() -> Path:
+    """Ensure ~/.mcode directory exists and return path.
+
+    This is called on CLI startup to ensure the config directory exists.
+    Does not create config file - that's done by init_user_config().
+    """
+    config_dir = Path.home() / USER_CONFIG_DIR
+    config_dir.mkdir(parents=True, exist_ok=True)
+    return config_dir

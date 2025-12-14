@@ -70,6 +70,11 @@ def version() -> None:
 
 def cli() -> None:
     """CLI entry point"""
+    # Ensure config directory exists on first run
+    from maxagent.config.loader import ensure_config_dir
+
+    ensure_config_dir()
+
     # Preprocess argv for MCP Claude-style arguments
     mcp_cmd.preprocess_argv()
     app()
