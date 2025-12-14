@@ -1,6 +1,9 @@
-# MaxAgent
+# MCode
 
-An AI-powered CLI code assistant based on LiteLLM + GitHub Copilot/GLM, similar to Claude Code / Cursor.
+An AI-powered CLI code assistant based on GitHub Copilot/GLM, similar to Claude Code / OpenCode.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
 [English](#features) | [中文](#功能特性)
 
@@ -22,8 +25,8 @@ An AI-powered CLI code assistant based on LiteLLM + GitHub Copilot/GLM, similar 
 
 ```bash
 # Clone the repository
-git clone https://github.com/maxazure/maxagent.git
-cd maxagent
+git clone https://github.com/maxazure/mcode.git
+cd mcode
 
 # Create virtual environment
 python3.12 -m venv .venv
@@ -209,7 +212,7 @@ ruff check src/
 ## Project Structure
 
 ```
-maxagent/
+mcode/
 ├── src/maxagent/
 │   ├── cli/          # CLI commands
 │   ├── core/         # Agent core (agent, orchestrator)
@@ -252,8 +255,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ```bash
 # 安装
-git clone https://github.com/maxazure/maxagent.git
-cd maxagent
+git clone https://github.com/maxazure/mcode.git
+cd mcode
 pip install -e ".[all]"
 
 # 认证 GitHub Copilot
